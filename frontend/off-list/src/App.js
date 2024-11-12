@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import PropertyListingPage from './frontend/PropertyListingPage';
+import PropertyListingPage from './components/PropertyListingPage';
 
 function App() {
   return (

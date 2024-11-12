@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const PropertyListingPage = () => {
   const [properties, setProperties] = useState([
@@ -13,7 +12,16 @@ const PropertyListingPage = () => {
       description: "Beautiful modern home in prime location",
       type: "Single Family Home"
     },
-    // Add more sample properties here
+    {
+      id: 2,
+      price: 550000,
+      location: "Bellevue, WA",
+      bedrooms: 4,
+      bathrooms: 2.5,
+      sqft: 2200,
+      description: "Spacious family home with modern amenities",
+      type: "Single Family Home"
+    }
   ]);
 
   return (
@@ -29,23 +37,24 @@ const PropertyListingPage = () => {
       <div className="w-1/2 p-4 overflow-y-auto">
         <div className="grid gap-4">
           {properties.map((property) => (
-            <Card key={property.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>${property.price.toLocaleString()}</span>
+            <div 
+              key={property.id} 
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+            >
+              <div className="p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xl font-semibold">${property.price.toLocaleString()}</span>
                   <span className="text-sm text-gray-500">{property.location}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between text-sm text-gray-600">
+                </div>
+                <div className="flex justify-between text-sm text-gray-600 mb-3">
                   <span>{property.bedrooms} beds</span>
                   <span>{property.bathrooms} baths</span>
                   <span>{property.sqft.toLocaleString()} sqft</span>
                 </div>
-                <p className="mt-2 text-sm text-gray-700">{property.description}</p>
-                <p className="mt-1 text-xs text-gray-500">{property.type}</p>
-              </CardContent>
-            </Card>
+                <p className="text-sm text-gray-700 mb-2">{property.description}</p>
+                <p className="text-xs text-gray-500">{property.type}</p>
+              </div>
+            </div>
           ))}
         </div>
       </div>
