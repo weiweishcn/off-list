@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const PropertyListingPage = () => {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState([
     {
       id: 1,
@@ -24,6 +26,10 @@ const PropertyListingPage = () => {
     }
   ]);
 
+  const handlePropertyClick = (propertyId) => {
+    navigate(`/property/${propertyId}`);
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Left side - Map placeholder */}
@@ -39,7 +45,8 @@ const PropertyListingPage = () => {
           {properties.map((property) => (
             <div 
               key={property.id} 
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handlePropertyClick(property.id)}
             >
               <div className="p-4">
                 <div className="flex justify-between items-center mb-3">
