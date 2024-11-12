@@ -1,30 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { propertyData } from '../data/propertyData';
 
 const PropertyListingPage = () => {
   const navigate = useNavigate();
-  const [properties, setProperties] = useState([
-    {
-      id: 1,
-      price: 450000,
-      location: "Seattle, WA",
-      bedrooms: 3,
-      bathrooms: 2,
-      sqft: 1800,
-      description: "Beautiful modern home in prime location",
-      type: "Single Family Home"
-    },
-    {
-      id: 2,
-      price: 550000,
-      location: "Bellevue, WA",
-      bedrooms: 4,
-      bathrooms: 2.5,
-      sqft: 2200,
-      description: "Spacious family home with modern amenities",
-      type: "Single Family Home"
-    }
-  ]);
 
   const handlePropertyClick = (propertyId) => {
     navigate(`/property/${propertyId}`);
@@ -42,7 +21,7 @@ const PropertyListingPage = () => {
       {/* Right side - Property listings */}
       <div className="w-1/2 p-4 overflow-y-auto">
         <div className="grid gap-4">
-          {properties.map((property) => (
+          {propertyData.map((property) => (
             <div 
               key={property.id} 
               className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"

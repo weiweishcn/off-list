@@ -1,31 +1,31 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { propertyData } from '../data/propertyData';
 
 const PropertyDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   
-  // This would eventually come from your API
-  const property = {
-    id: id,
-    price: 450000,
-    location: "Seattle, WA",
-    bedrooms: 3,
-    bathrooms: 2,
-    sqft: 1800,
-    description: "Beautiful modern home in prime location with recent updates throughout. This stunning property features an open concept living area, updated kitchen with stainless steel appliances, and a spacious primary suite. The backyard offers a perfect space for outdoor entertaining with a covered patio and professional landscaping. Located in a highly sought-after neighborhood with easy access to parks, shopping, and excellent schools.",
-    type: "Single Family Home",
-    yearBuilt: 2015,
-    parking: "2 Car Garage",
-    heating: "Central",
-    cooling: "Central Air",
-    features: [
-      "Hardwood Floors",
-      "Granite Countertops",
-      "Stainless Steel Appliances",
-      "Walk-in Closets",
-      "Crown Molding"
-    ]
-  };
+  // Find the correct property based on the ID
+  const property = propertyData.find(p => p.id === parseInt(id));
+
+  // Handle case where property is not found
+  if (!property) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-8 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Property Not Found</h1>
+          <p className="mb-4">Sorry, we couldn't find the property you're looking for.</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            Return to Listings
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
