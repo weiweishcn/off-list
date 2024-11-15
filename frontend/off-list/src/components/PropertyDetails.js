@@ -14,8 +14,8 @@ const PropertyDetails = () => {
     return (
       <div className="min-h-screen bg-gray-100 py-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-2xl font-bold mb-4">Property Not Found</h1>
-          <p className="mb-4">Sorry, we couldn't find the property you're looking for.</p>
+          <h1 className="text-2xl font-bold mb-4">Designer Not Found</h1>
+          <p className="mb-4">Sorry, we couldn't find the designer you're looking for.</p>
           <button 
             onClick={() => navigate('/')}
             className="text-blue-600 hover:text-blue-800"
@@ -52,8 +52,8 @@ const PropertyDetails = () => {
             
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="text-center">
-                <span className="block text-gray-500">Beds</span>
-                <span className="text-lg font-semibold">{property.bedrooms}</span>
+                <span className="block text-gray-500">Style</span>
+                <span className="text-lg font-semibold">{property.style}</span>
               </div>
               <div className="text-center">
                 <span className="block text-gray-500">Baths</span>
@@ -92,7 +92,7 @@ const PropertyDetails = () => {
             </div>
             
             <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors">
-              Contact Agent
+              Contact Designer
             </button>
           </div>
         </div>

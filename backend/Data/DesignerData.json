@@ -1,0 +1,29 @@
+[
+    {
+		"designer": "mahesh",
+        "tag": ["kitchen", "bathroom"],
+		"yoe": "10",
+		"style": ["farmHouse"],
+		"designProfolio": [1],
+		"bio": "experienced designer focusing on bathroom and kitchen design",
+		"id": 1
+	},
+	{
+		"designer": "suresh",
+		"tag": ["backyard", "curbappeal"],
+        "yoe": "20",
+		"style": ["modern", "concrete"],
+		"designProfolio": [2],
+        "bio": "experienced designer focusing on backyard and curb appeal",
+		"id": 2
+	},
+	{
+		"designer": "suresh",
+		"tag": ["bedroom"],
+        "yoe": "30",
+		"style": ["modern", "treeHouse"],
+		"designProfolio": [2],
+        "bio": "experienced designer focusing on backyard and curb appeal",
+		"id": 3
+	}
+]

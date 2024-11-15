@@ -4,6 +4,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
+const fs = require("fs");
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -32,10 +33,23 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Routes
+app.get('/api/design', function (req, res) {
+   fs.readFile("data/DesignData.json", 'utf8', function (err, data) {
+      res.end( data );
+   });
+})
+
+app.get('/api/designer', function (req, res) {
+   fs.readFile("data/DesignerData.json", 'utf8', function (err, data) {
+      res.end( data );
+   });
+})
+
 app.get('/api/properties', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM properties');
     res.json(result.rows);
+    res.json(designData);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

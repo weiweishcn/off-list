@@ -1,0 +1,29 @@
+[
+    {
+		"designer": "mahesh",
+		"tag": "condo",
+		"style": "farmHouse",
+		"images": ["https://cdn.prod.website-files.com/5e50fe1a8c34f832ff4401f5/5e5e5e0b3a300b338137bcd7_IND_9_Murray_Street_8W_New_York_NY_Studio_-_5_Photos_2_20181016-100146.jpeg"],
+    	"color": ["grey"],
+		"description": "entire condo design",
+		"id": 1
+	},
+	{
+		"designer": "suresh",
+		"tag": "kitchen",
+		"style": "modern",
+		"images": ["https://media.bluentcad.com/images/condo-interior-design.webp"],
+		"color": ["white"],
+		"description": "modern kitchen white",
+		"id": 2
+	},
+	{
+		"designer": "ramesh",
+		"tag": "bathroom",
+		"style": "spanish",
+		"images": ["https://static.wixstatic.com/media/60f635_15bb0ddd5ab54cf882d223f18100ea8d~mv2.jpg/v1/fill/w_980,h_1210,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/60f635_15bb0ddd5ab54cf882d223f18100ea8d~mv2.jpg"],
+		"color": ["grey"],
+		"description": "balck bathroom remodel",
+		"id": 3
+	}
+]
