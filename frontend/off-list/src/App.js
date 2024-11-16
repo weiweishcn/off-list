@@ -8,6 +8,7 @@ import DesignList from './components/DesignList';
 import DesignerList from './components/DesignerList';
 import ContactForm from './components/ContactForm';
 import LoginPage from './components/LoginPage';
+import CreateDesign from './components/CreateDesign';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/designer" element={<DesignerList />} />
           <Route path="/contact" element={<ContactForm />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/designRequest" element={<CreateDesign />} />
         </Routes>
       </div>
     </Router>
