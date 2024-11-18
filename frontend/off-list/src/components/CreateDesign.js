@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import emailjs from '@emailjs/browser';
+import FileUpload from './FileUpload';
 
 export const CreateDesign = () => {
   const form = useRef();
@@ -24,6 +25,7 @@ export const CreateDesign = () => {
   };
 
   return (
+    <div>
     <form ref={form} onSubmit={sendEmail}>
       <label>Name</label>
       <input type="text" name="from_name" />
@@ -43,12 +45,19 @@ export const CreateDesign = () => {
       <input type="text" name="pattern" />
       <label>Zip Code</label>
       <input type="text" name="zipcode" />
-      <label>Inspiration Images (urls)</label>
-      <input type="text" name="images" />
       <label>Message</label>
       <textarea name="message" />
       <input type="submit" value="Send" />
     </form>
+    <div>
+      <p> add your home images here</p>
+      <FileUpload /> 
+    </div>
+    <div>
+      <p> add your inspiration images here</p>
+      <FileUpload /> 
+    </div>
+    </div>
   );
 };
 
