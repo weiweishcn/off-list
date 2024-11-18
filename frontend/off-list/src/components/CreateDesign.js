@@ -1,63 +1,53 @@
-import { useState } from 'react';
+import React, { useRef } from 'react';
 import emailjs from '@emailjs/browser';
 
-const ContactForm = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [stateMessage, setStateMessage] = useState(null);
+export const CreateDesign = () => {
+  const form = useRef();
+
   const sendEmail = (e) => {
-    e.persist();
     e.preventDefault();
-    setIsSubmitting(true);
+
     emailjs
-      .sendForm(
-        process.env.REACT_APP_SERVICE_ID,
-        process.env.REACT_APP_TEMPLATE_ID,
-        e.target,
-        process.env.REACT_APP_PUBLIC_KEY
-      )
+      .sendForm('service_2ojs1zm', 'template_is4zoid', form.current, {
+        publicKey: 'txupk1NbFN0mcpUCJ',
+      })
       .then(
-        (result) => {
-          setStateMessage('Message sent!');
-          setIsSubmitting(false);
-          setTimeout(() => {
-            setStateMessage(null);
-          }, 5000); // hide message after 5 seconds
+        () => {
+          console.log('SUCCESS!');
         },
         (error) => {
-          setStateMessage('Something went wrong, please try again later');
-          setIsSubmitting(false);
-          setTimeout(() => {
-            setStateMessage(null);
-          }, 5000); // hide message after 5 seconds
-        }
+          console.log('FAILED...', error.text);
+        },
       );
-    
-    // Clears the form after sending the email
-    e.target.reset();
   };
+
   return (
-    <form onSubmit={sendEmail}>
-      <label>What room?</label>
-      <input type="text" name="room" />
-      <label>Style</label>
-      <input type="text" name="style" />
+    <form ref={form} onSubmit={sendEmail}>
+      <label>Name</label>
+      <input type="text" name="from_name" />
+      <label>Email</label>
+      <input type="email" name="user_email" />
+      <label>Type of Room</label>
+      <input type="text" name="room_type" />
+      <label>Length</label>
+      <input type="text" name="length" />
+      <label>Width</label>
+      <input type="text" name="width" />
+      <label>Height</label>
+      <input type="text" name="height" />
       <label>Color</label>
       <input type="text" name="color" />
       <label>Pattern</label>
-      <input type="text" name="color" />
-      <label>Height</label>
-      <input type="text" name="height" />
-      <label>Width</label>
-      <input type="text" name="width" />
-      <label>Length</label>
-      <input type="text" name="length" />
-      <label>Inspiration Images</label>
-      <input type="text" name="insp_images" />
-      <label>Any other comments</label>
+      <input type="text" name="pattern" />
+      <label>Zip Code</label>
+      <input type="text" name="zipcode" />
+      <label>Inspiration Images (urls)</label>
+      <input type="text" name="images" />
+      <label>Message</label>
       <textarea name="message" />
-      <input type="submit" value="Send" disabled={isSubmitting} />
-      {stateMessage && <p>{stateMessage}</p>}
+      <input type="submit" value="Send" />
     </form>
   );
 };
-export default ContactForm;
+
+export default CreateDesign;
