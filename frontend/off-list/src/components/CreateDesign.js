@@ -13,9 +13,11 @@ export const CreateDesign = () => {
       })
       .then(
         () => {
+          alert("Request sent successfully!");
           console.log('SUCCESS!');
         },
         (error) => {
+          alert("FAILED!"+ error);
           console.log('FAILED...', error.text);
         },
       );
