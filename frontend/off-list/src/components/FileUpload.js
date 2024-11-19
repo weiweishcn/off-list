@@ -1,68 +1,85 @@
 import axios from 'axios';
-import React, { Fragment, useState } from 'react';
+import React, { useState } from 'react';
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+
+  const resetImages = () => {
+    setFiles([]);
+    setPreviews([]);
+    // Optional: Call parent component's reset method if needed
+  };
 
   const onChange = e => {
-    console.log(e.target.files);
-    setFiles(e.target.files)
+    const newFiles = Array.from(e.target.files);
+    
+    // Add new files to existing files
+    setFiles(prevFiles => [...prevFiles, ...newFiles]);
+
+    // Generate previews
+    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+    setPreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
   };
-  console.log(files);
 
   const onSubmit = async e => {
     e.preventDefault();
-    console.log("onSubmit started");
     const formData = new FormData();
-    Object.values(files).forEach(file=>{
+    files.forEach(file => {
       formData.append("uploadImages", file);
     });
 
     try {
-      console.log("posting to upload API");
-      const res = await axios.post('http://localhost:3001/api/upload/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-      }).then(
-        () => {
-          alert("Upload success!");
-          console.log('Upload SUCCESS!');
-        },
-        (error) => {
-          alert("FAILED!"+ error);
-          console.log('FAILED...', error.text);
-        },
-      );
-      console.log(res);
+      await axios.post('http://localhost:3001/api/upload/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      alert("Upload success!");
     } catch (err) {
-      if (err.response.status === 500) {
-        console.log(err);
-      } else {
-        console.log(err.response.data.msg);
-      }
+      console.error(err);
+      alert("Upload failed: " + err.message);
     }
   };
 
+  const removeImage = (indexToRemove) => {
+    setFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
+    setPreviews(prevPreviews => prevPreviews.filter((_, index) => index !== indexToRemove));
+  };
+
   return (
-    <Fragment>
+    <div>
       <form onSubmit={onSubmit}>
-        <div>
-          <input
-            type='file'
-            id='file'
-            name="uploadImages"
-            multiple
-            onChange={onChange}
-          />
+        <input
+          type='file'
+          multiple
+          onChange={onChange}
+        />
+        <button 
+          type="button" 
+          onClick={onSubmit}
+        >
+          Upload
+        </button>
+        
+        <div className="flex flex-wrap gap-4 mt-4">
+          {previews.map((preview, index) => (
+            <div key={index} className="relative">
+              <img 
+                src={preview} 
+                alt={`Preview ${index}`} 
+                className="w-32 h-32 object-cover rounded"
+              />
+              <button
+                type="button"
+                onClick={() => removeImage(index)}
+                className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full"
+              >
+                X
+              </button>
+            </div>
+          ))}
         </div>
-          <input
-            type="button"  // Change from type="submit"
-            value='Upload'
-            onClick={onSubmit}
-          />
       </form>
-    </Fragment>
+    </div>
   );
 };
 

@@ -150,7 +150,9 @@ const CreateDesign = () => {
         {question.type === 'upload' ? (
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <p className="text-gray-600 mb-4">{question.uploadLabel}</p>
-            <FileUpload />
+            <FileUpload 
+              key={`upload-${currentStep}`}  // Force component remount
+            />
           </div>
         ) : question.multiField ? (
           <div className="grid grid-cols-3 gap-4">
