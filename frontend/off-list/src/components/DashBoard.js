@@ -28,16 +28,7 @@ function HomePage() {
                   e.preventDefault();
                   window.location.href='./login';
                   }}
-            > login 
-            </button>
-            <button
-                type="button"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href='./signup';
-                  }}
-            > signup
+            > signout
             </button>
             <button
                 type="button"

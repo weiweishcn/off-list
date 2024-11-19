@@ -8,7 +8,9 @@ import DesignList from './components/DesignList';
 import DesignerList from './components/DesignerList';
 import ContactForm from './components/ContactForm';
 import LoginPage from './components/LoginPage';
+import Signup from './components/Signup';
 import CreateDesign from './components/CreateDesign';
+import DashBoard from './components/DashBoard';
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
           <Route path="/contact" element={<ContactForm />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/designRequest" element={<CreateDesign />} />
+          <Route path="/dashboard" element={<DashBoard />} />
+          <Route path="/signup" element={<Signup />} />
         </Routes>
       </div>
     </Router>

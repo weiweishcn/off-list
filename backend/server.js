@@ -8,6 +8,7 @@ const fs = require("fs");
 const aws = require('aws-sdk');
 const multerS3 = require('multer-s3');
 const multiparty = require('multiparty');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -18,12 +19,69 @@ app.use(express.json());
 
 // Database connection
 const pool = new Pool({
-  user: 'offlist_user',
-  host: 'localhost',
-  database: 'offlist',
-  password: 'your_password',
-  port: 5432,
+  user: 'doadmin',
+  host: 'db-postgresql-nyc3-65932-do-user-18295862-0.k.db.ondigitalocean.com',
+  database: 'defaultdb',
+  password: 'AVNS_CliWQBVIUI24IpBynlW',
+  port: 25060,
+  ssl: {
+    ca: fs.readFileSync("DB/ca-certificate.crt").toString()
+  }
 });
+
+   app.post('/api/login', async (req, res) => {
+     const { username, password } = req.body;
+    try {
+      const test = await pool.query('select * from users');
+      console.log(test.rows);
+      const result = await pool.query('SELECT "password_hash" FROM users WHERE email=$1',[username]);
+      if (result.rows[0].password_hash === password) {
+        console.log('success');
+        const token = jwt.sign({ username: username }, 'secret-key');
+        res.send({ token });
+        console.log(token);
+        //res.redirect('http://localhost:3000/dashboard'); 
+     } else {
+       res.status(401).json({ error: 'Invalid credentials' });
+     }
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).json({ error: err.message });
+    }
+   });
+
+    app.post('/api/signup', async (req, res) => {
+     const { username, password } = req.body;
+     console.log(username, password)
+    try {
+      const result = await pool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2)', [username, password]);
+      console.log('success');
+      const token = jwt.sign({ username: username }, 'secret-key');
+      res.send({ token });
+      console.log(token);
+        //res.redirect('http://localhost:3000/dashboard'); 
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).json({ error: err.message });
+    }
+   });
+
+   // Protected route
+  app.get('/dashboard', (req, res) => {
+    console.log("protected dashboard")
+    const token = req.headers['authorization'];
+    if (token) {
+      jwt.verify(token, 'secret-key', (err, decoded) => {
+        if (err) {
+          res.send('Invalid token');
+        } else {
+          res.send(`Welcome, ${decoded.username}!`);
+        }
+      });
+    } else {
+      res.send('Unauthorized');
+    }
+  });
 
 // File upload configuration
 

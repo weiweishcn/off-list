@@ -1,7 +1,6 @@
-   // src/components/LoginForm.js
    import React, { useState } from 'react';
 
-   const LoginPage = () => {
+   const Signup = () => {
      const [username, setUsername] = useState('');
      const [password, setPassword] = useState('');
 
@@ -9,13 +8,14 @@
        event.preventDefault();
 
        try {
-         const response = await fetch('http://localhost:3001/api/login', {
+         const response = await fetch('http://localhost:3001/api/signup', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({ username, password }),
          });
 
          if (response.ok) {
+          console.log(response.token);
            // Successful login, redirect to dashboard or other page
            window.location.href = '/dashboard';
          } else {
@@ -45,4 +45,4 @@
      );
    };
 
-   export default LoginPage;
+export default Signup;
