@@ -17,7 +17,7 @@ const PropertyDetails = () => {
           <h1 className="text-2xl font-bold mb-4">Designer Not Found</h1>
           <p className="mb-4">Sorry, we couldn't find the designer you're looking for.</p>
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="text-blue-600 hover:text-blue-800"
           >
             Return to Listings
@@ -31,7 +31,7 @@ const PropertyDetails = () => {
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <Link 
-          to="/" 
+          to="/dashboard" 
           className="inline-block mb-6 text-blue-600 hover:text-blue-800"
         >
           ← Back to Listings
