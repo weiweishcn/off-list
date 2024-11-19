@@ -115,8 +115,9 @@ const multi_upload = multer({
 }).array('uploadImages', 10);
 
 app.post('/api/upload', (req, res) => {
+  console.log("received upload request");
     multi_upload(req, res, function (err) {
-      console.log(req.files);
+    console.log(req.files);
     //multer error
     if (err instanceof multer.MulterError) {
       console.log(err);
@@ -130,11 +131,13 @@ app.post('/api/upload', (req, res) => {
     } else if (err) {
       //unknown error
       if (err.name == 'ExtensionError') {
+        console.log("upload extension error", err.message);
         res
           .status(413)
           .send({ error: { msg: `${err.message}` } })
           .end();
       } else {
+        console.log("upload 500 error")
         res
           .status(500)
           .send({ error: { msg: `unknown uploading error: ${err.message}` } })
@@ -142,6 +145,7 @@ app.post('/api/upload', (req, res) => {
       }
       return;
     }
+    console.log("upload success");
     res.status(200).send('file uploaded');
   });
 });

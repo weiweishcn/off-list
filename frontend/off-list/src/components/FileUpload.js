@@ -9,14 +9,17 @@ const FileUpload = () => {
     setFiles(e.target.files)
   };
   console.log(files);
+
   const onSubmit = async e => {
     e.preventDefault();
+    console.log("onSubmit started");
     const formData = new FormData();
     Object.values(files).forEach(file=>{
       formData.append("uploadImages", file);
     });
 
     try {
+      console.log("posting to upload API");
       const res = await axios.post('http://localhost:3001/api/upload/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -53,10 +56,11 @@ const FileUpload = () => {
             onChange={onChange}
           />
         </div>
-        <input
-          type='submit'
-          value='Upload'
-        />
+          <input
+            type="button"  // Change from type="submit"
+            value='Upload'
+            onClick={onSubmit}
+          />
       </form>
     </Fragment>
   );
