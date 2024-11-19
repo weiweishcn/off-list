@@ -39,6 +39,8 @@ const CreateDesign = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
+  const [currentSpaceUrls, setCurrentSpaceUrls] = useState([]);
+  const [inspirationUrls, setInspirationUrls] = useState([]);
   const [formData, setFormData] = useState({
     from_name: '',
     user_email: '',
@@ -49,14 +51,17 @@ const CreateDesign = () => {
     color: '',
     pattern: '',
     zipcode: '',
-    message: ''
+    message: '',
+    current_space_photos: '',
+    inspiration_photos: ''
   });
 
   const questions = [
     { label: "What's your name?", key: 'from_name', type: 'text', placeholder: 'Enter your full name' },
     { label: "What's your email?", key: 'user_email', type: 'email', placeholder: 'Enter your email address' },
     { label: "What type of room are you designing?", key: 'room_type', type: 'text', placeholder: 'e.g., Kitchen, Living Room, Bathroom' },
-    { label: "What are the room's dimensions?", 
+    { 
+      label: "What are the room's dimensions?", 
       multiField: true,
       fields: [
         { key: 'length', placeholder: 'Length (ft)', type: 'number' },
@@ -74,6 +79,22 @@ const CreateDesign = () => {
 
   const handleInputChange = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleUploadComplete = (urls, type) => {
+    if (type === 'current_space') {
+      setCurrentSpaceUrls(urls);
+      setFormData(prev => ({
+        ...prev,
+        current_space_photos: urls.join(', ')
+      }));
+    } else if (type === 'inspiration') {
+      setInspirationUrls(urls);
+      setFormData(prev => ({
+        ...prev,
+        inspiration_photos: urls.join(', ')
+      }));
+    }
   };
 
   const isCurrentStepValid = () => {
@@ -151,7 +172,13 @@ const CreateDesign = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <p className="text-gray-600 mb-4">{question.uploadLabel}</p>
             <FileUpload 
-              key={`upload-${currentStep}`}  // Force component remount
+              key={`upload-${currentStep}`}
+              onUploadComplete={(urls) => handleUploadComplete(
+                urls, 
+                question.uploadLabel === 'Current Space Photos' 
+                  ? 'current_space' 
+                  : 'inspiration'
+              )}
             />
           </div>
         ) : question.multiField ? (

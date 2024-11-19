@@ -1,14 +1,15 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 
-const FileUpload = () => {
+const FileUpload = ({ onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
+  const [uploadedUrls, setUploadedUrls] = useState([]);
 
   const resetImages = () => {
     setFiles([]);
     setPreviews([]);
-    // Optional: Call parent component's reset method if needed
+    setUploadedUrls([]);
   };
 
   const onChange = e => {
@@ -24,15 +25,30 @@ const FileUpload = () => {
 
   const onSubmit = async e => {
     e.preventDefault();
+    if (files.length === 0) {
+      alert("Please select files to upload");
+      return;
+    }
+
     const formData = new FormData();
     files.forEach(file => {
       formData.append("uploadImages", file);
     });
 
     try {
-      await axios.post('http://localhost:3001/api/upload/', formData, {
+      const response = await axios.post('http://localhost:3001/api/upload/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
+      // Store the uploaded image URLs
+      const imageUrls = response.data.imageUrls;
+      setUploadedUrls(imageUrls);
+
+      // Call the onUploadComplete prop with the URLs if provided
+      if (onUploadComplete) {
+        onUploadComplete(imageUrls);
+      }
+
       alert("Upload success!");
     } catch (err) {
       console.error(err);
@@ -52,10 +68,12 @@ const FileUpload = () => {
           type='file'
           multiple
           onChange={onChange}
+          accept=".jpg,.jpeg,.png"
         />
         <button 
           type="button" 
           onClick={onSubmit}
+          disabled={files.length === 0}
         >
           Upload
         </button>
@@ -79,6 +97,18 @@ const FileUpload = () => {
           ))}
         </div>
       </form>
+
+      {/* Optional: Display uploaded image URLs */}
+      {uploadedUrls.length > 0 && (
+        <div className="mt-4">
+          <h3>Uploaded Image URLs:</h3>
+          <ul>
+            {uploadedUrls.map((url, index) => (
+              <li key={index} className="break-all">{url}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

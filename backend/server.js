@@ -115,6 +115,34 @@ const multi_upload = multer({
 }).array('uploadImages', 10);
 
 app.post('/api/upload', (req, res) => {
+  multi_upload(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(500).send({
+        error: { msg: `multer uploading error: ${err.message}` }
+      });
+    } else if (err) {
+      if (err.name == 'ExtensionError') {
+        return res.status(413).send({ error: { msg: `${err.message}` } });
+      }
+      return res.status(500).send({ 
+        error: { msg: `unknown uploading error: ${err.message}` } 
+      });
+    }
+
+    // If upload successful, return image URLs
+    if (req.files) {
+      const imageUrls = req.files.map(file => file.location);
+      console.log("Uploaded image URLs:", imageUrls);
+      res.status(200).json({ imageUrls });
+    } else {
+      res.status(400).send({ error: { msg: 'No files uploaded' } });
+    }
+  });
+});
+
+/*
+old upload api 
+app.post('/api/upload', (req, res) => {
   console.log("received upload request");
     multi_upload(req, res, function (err) {
     console.log(req.files);
@@ -149,6 +177,7 @@ app.post('/api/upload', (req, res) => {
     res.status(200).send('file uploaded');
   });
 });
+*/
 
 // Routes
 app.get('/api/design', function (req, res) {
