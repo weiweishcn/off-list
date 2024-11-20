@@ -92,45 +92,86 @@ const s3 = new aws.S3({
   endpoint: spacesEndpoint
 });
 
-const multi_upload = multer({
+// Regular image upload configuration
+const imageUpload = multer({
   storage: multerS3({
     s3: s3,
     bucket: 'designimages',
     acl: 'public-read',
+    key: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const originalName = file.originalname || '';
+      const fileExtension = originalName.split('.').pop() || '';
+      cb(null, `${file.fieldname}-${uniqueSuffix}${fileExtension ? '.' + fileExtension : ''}`);
+    }
   }),
+  limits: {
+    fileSize: 100 * 1024 * 1024,
+    files: 10
+  },
   fileFilter: (req, file, cb) => {
     if (
-      file.mimetype == 'image/png' ||
-      file.mimetype == 'image/jpeg' ||
-      file.mimetype == 'image/jpg'
+      file.mimetype === 'image/png' ||
+      file.mimetype === 'image/jpeg' ||
+      file.mimetype === 'image/jpg'
     ) {
       cb(null, true);
     } else {
-      cb(null, false);
-      const err = new Error('Only .jpg .jpeg .png images are supported!');
+      const err = new Error('Images must be JPG or PNG');
       err.name = 'ExtensionError';
       return cb(err);
     }
-  },
-}).array('uploadImages', 10);
+  }
+}).array('uploadFiles', 10);
 
+// Floor plan upload configuration
+const floorPlanUpload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: 'designimages',
+    acl: 'public-read',
+    key: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const originalName = file.originalname || '';
+      const fileExtension = originalName.split('.').pop() || '';
+      cb(null, `floor-plan-${uniqueSuffix}${fileExtension ? '.' + fileExtension : ''}`);
+    }
+  }),
+  limits: {
+    fileSize: 100 * 1024 * 1024,
+    files: 10
+  },
+  fileFilter: (req, file, cb) => {
+    // Check MIME type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Floor plan must be PDF, JPG, or PNG'));
+    }
+  }
+}).array('uploadFiles', 10);
+
+// Regular image upload endpoint
 app.post('/api/upload', (req, res) => {
-  multi_upload(req, res, function (err) {
+  imageUpload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
       return res.status(500).send({
-        error: { msg: `multer uploading error: ${err.message}` }
+        error: { msg: `Upload error: ${err.message}` }
       });
     } else if (err) {
-      if (err.name == 'ExtensionError') {
-        return res.status(413).send({ error: { msg: `${err.message}` } });
+      console.error('Upload error:', err);
+      if (err.name === 'ExtensionError') {
+        return res.status(413).send({ error: { msg: err.message } });
       }
       return res.status(500).send({ 
-        error: { msg: `unknown uploading error: ${err.message}` } 
+        error: { msg: `Upload error: ${err.message}` } 
       });
     }
 
-    // If upload successful, return image URLs
-    if (req.files) {
+    if (req.files && req.files.length > 0) {
       const imageUrls = req.files.map(file => file.location);
       console.log("Uploaded image URLs:", imageUrls);
       res.status(200).json({ imageUrls });
@@ -140,6 +181,33 @@ app.post('/api/upload', (req, res) => {
   });
 });
 
+// Floor plan upload endpoint
+app.post('/api/upload-floor-plan', (req, res) => {
+  floorPlanUpload(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      return res.status(500).send({
+        error: { msg: `Upload error: ${err.message}` }
+      });
+    } else if (err) {
+      console.error('Upload error:', err);
+      if (err.name === 'ExtensionError') {
+        return res.status(413).send({ error: { msg: err.message } });
+      }
+      return res.status(500).send({ 
+        error: { msg: `Upload error: ${err.message}` } 
+      });
+    }
+
+    if (req.files && req.files.length > 0) {
+      const urls = req.files.map(file => file.location);
+      console.log("Uploaded floor plan URLs:", urls);
+      res.status(200).json({ imageUrls: urls });
+    } else {
+      res.status(400).send({ error: { msg: 'No files uploaded' } });
+    }
+  });
+});
 /*
 old upload api 
 app.post('/api/upload', (req, res) => {

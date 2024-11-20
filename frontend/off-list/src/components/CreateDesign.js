@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import FileUpload from './FileUpload';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Dialog = ({ isOpen, onClose, title, description, onConfirm, showCancel = true }) => {
   if (!isOpen) return null;
@@ -41,6 +42,9 @@ const CreateDesign = () => {
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   const [currentSpaceUrls, setCurrentSpaceUrls] = useState([]);
   const [inspirationUrls, setInspirationUrls] = useState([]);
+  const [floorPlanUrls, setFloorPlanUrls] = useState([]);
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState('');
   const [formData, setFormData] = useState({
     from_name: '',
     user_email: '',
@@ -53,7 +57,8 @@ const CreateDesign = () => {
     zipcode: '',
     message: '',
     current_space_photos: '',
-    inspiration_photos: ''
+    inspiration_photos: '',
+    floor_plan_files: ''
   });
 
   const questions = [
@@ -72,30 +77,120 @@ const CreateDesign = () => {
     { label: "Do you have any color preferences?", key: 'color', type: 'text', placeholder: 'e.g., Earth tones, Bright colors, Neutrals' },
     { label: "Any pattern preferences?", key: 'pattern', type: 'text', placeholder: 'e.g., Modern, Traditional, Minimalist' },
     { label: "What's your zip code?", key: 'zipcode', type: 'text', placeholder: 'Enter your zip code' },
-    { label: "Any additional details we should know?", key: 'message', type: 'textarea', placeholder: 'Tell us more about your vision...' },
-    { label: "Upload photos of your current space", type: 'upload', uploadLabel: 'Current Space Photos' },
-    { label: "Upload inspiration photos", type: 'upload', uploadLabel: 'Inspiration Photos' }
+    { 
+      label: "Upload your floor plan (optional)", 
+      type: 'upload', 
+      uploadLabel: 'Floor Plan', 
+      uploadType: 'floor_plan',
+      acceptedFileTypes: 'application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png', 
+      description: 'Upload PDF or image files (max 100MB)'
+    },
+    { 
+      label: "Upload photos of your current space", 
+      type: 'upload', 
+      uploadLabel: 'Current Space Photos', 
+      uploadType: 'current_space',
+      acceptedFileTypes: '.jpg,.jpeg,.png',
+      description: 'Upload image files (max 100MB)'
+    },
+    { 
+      label: "Upload inspiration photos", 
+      type: 'upload', 
+      uploadLabel: 'Inspiration Photos', 
+      uploadType: 'inspiration',
+      acceptedFileTypes: '.jpg,.jpeg,.png',
+      description: 'Upload image files (max 100MB)'
+    },
+    { label: "Any additional details we should know?", key: 'message', type: 'textarea', placeholder: 'Tell us more about your vision...' }
   ];
 
   const handleInputChange = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleUploadComplete = (urls, type) => {
-    if (type === 'current_space') {
-      setCurrentSpaceUrls(urls);
-      setFormData(prev => ({
-        ...prev,
-        current_space_photos: urls.join(', ')
-      }));
-    } else if (type === 'inspiration') {
-      setInspirationUrls(urls);
-      setFormData(prev => ({
-        ...prev,
-        inspiration_photos: urls.join(', ')
-      }));
+  const handleFloorPlanUpload = async (files) => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append("uploadFiles", file);
+    });
+
+    try {
+      const response = await axios.post('http://localhost:3001/api/upload-floor-plan', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const urls = response.data.floorPlanUrls;
+      setFloorPlanUrls(urls);
+      return urls;
+    } catch (error) {
+      console.error('Floor plan upload failed:', error);
+      throw error;
     }
   };
+
+const validateFiles = (files, type) => {
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+  const allowedPDFTypes = ['application/pdf'];
+
+  return files.every(file => {
+    // Check file size
+    if (file.size > maxSize) {
+      throw new Error('File size must be less than 100MB');
+    }
+
+    // Check file type
+    if (type === 'floor_plan') {
+      if (![...allowedImageTypes, ...allowedPDFTypes].includes(file.mimetype)) {
+        throw new Error('Floor plan must be PDF, JPG, or PNG');
+      }
+    } else {
+      if (!allowedImageTypes.includes(file.mimetype)) {
+        throw new Error('Images must be JPG or PNG');
+      }
+    }
+
+    return true;
+  });
+};
+
+const handleUploadComplete = async (urls, type) => {  // Change parameter from 'files' to 'urls'
+  try {
+    switch(type) {
+      case 'floor_plan':
+        setFloorPlanUrls(urls);
+        setFormData(prev => ({
+          ...prev,
+          floor_plan_files: urls.join(', ')
+        }));
+        setShowUploadSuccess(true);
+        setUploadSuccessMessage(`Successfully uploaded floor plan`);
+        break;
+
+      case 'current_space':
+        setCurrentSpaceUrls(urls);
+        setFormData(prev => ({
+          ...prev,
+          current_space_photos: urls.join(', ')
+        }));
+        break;
+
+      case 'inspiration':
+        setInspirationUrls(urls);
+        setFormData(prev => ({
+          ...prev,
+          inspiration_photos: urls.join(', ')
+        }));
+        break;
+
+      default:
+        console.warn('Unknown upload type:', type);
+    }
+  } catch (error) {
+    console.error('Upload failed:', error);
+    alert('Upload failed: ' + error.message);
+  }
+};
 
   const isCurrentStepValid = () => {
     if (currentStep >= questions.length) return true;
@@ -106,16 +201,6 @@ const CreateDesign = () => {
     }
     if (question.type === 'upload') return true;
     return formData[question.key]?.trim();
-  };
-
-  const handleNext = () => {
-    if (isCurrentStepValid()) {
-      if (currentStep < questions.length - 1) {
-        setCurrentStep(prev => prev + 1);
-      } else {
-        setShowConfirm(true);
-      }
-    }
   };
 
   const hasUnsavedChanges = () => {
@@ -130,10 +215,19 @@ const CreateDesign = () => {
     }
   };
 
+  const handleNext = () => {
+    if (isCurrentStepValid()) {
+      if (currentStep < questions.length - 1) {
+        setCurrentStep(prev => prev + 1);
+      } else {
+        setShowConfirm(true);
+      }
+    }
+  };
+
   const handleSubmit = (e) => {
     e?.preventDefault();
     
-    // Create a hidden form with all the data
     const formElement = form.current;
     Object.entries(formData).forEach(([key, value]) => {
       const input = formElement.querySelector(`[name="${key}"]`);
@@ -171,14 +265,12 @@ const CreateDesign = () => {
         {question.type === 'upload' ? (
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <p className="text-gray-600 mb-4">{question.uploadLabel}</p>
+            <p className="text-sm text-gray-500 mb-4">{question.description}</p>
             <FileUpload 
               key={`upload-${currentStep}`}
-              onUploadComplete={(urls) => handleUploadComplete(
-                urls, 
-                question.uploadLabel === 'Current Space Photos' 
-                  ? 'current_space' 
-                  : 'inspiration'
-              )}
+              onUploadComplete={(urls) => handleUploadComplete(urls, question.uploadType)}
+              accept={question.acceptedFileTypes}
+              uploadType={question.uploadType}
             />
           </div>
         ) : question.multiField ? (
@@ -218,7 +310,6 @@ const CreateDesign = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      {/* Home button */}
       <button
         onClick={handleHomeClick}
         className="fixed top-4 left-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
@@ -231,12 +322,10 @@ const CreateDesign = () => {
 
       <div className="max-w-2xl mx-auto">
         <form ref={form} onSubmit={(e) => e.preventDefault()} className="space-y-8">
-          {/* Hidden form fields for emailjs */}
           {Object.keys(formData).map(key => (
             <input key={key} type="hidden" name={key} />
           ))}
           
-          {/* Progress bar */}
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-in-out"
@@ -267,7 +356,6 @@ const CreateDesign = () => {
           </div>
         </form>
 
-        {/* Confirmation Dialog */}
         <Dialog
           isOpen={showConfirm}
           onClose={() => setShowConfirm(false)}
@@ -276,7 +364,6 @@ const CreateDesign = () => {
           onConfirm={handleSubmit}
         />
 
-        {/* Success Dialog */}
         <Dialog
           isOpen={showSuccess}
           onClose={() => setShowSuccess(false)}
@@ -286,7 +373,6 @@ const CreateDesign = () => {
           showCancel={false}
         />
 
-        {/* Return Home Confirmation Dialog */}
         <Dialog
           isOpen={showHomeConfirm}
           onClose={() => setShowHomeConfirm(false)}
