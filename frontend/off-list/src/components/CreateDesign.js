@@ -143,7 +143,7 @@ const CreateDesign = () => {
     });
 
     emailjs
-      .sendForm('service_2ojs1zm', 'template_is4zoid', formElement, {
+      .sendForm('service_mvjkasf', 'template_is4zoid', formElement, {
         publicKey: 'txupk1NbFN0mcpUCJ',
       })
       .then(
