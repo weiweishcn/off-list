@@ -39,26 +39,32 @@ const pool = new Pool({
   }
 });
 
-   app.post('/api/login', async (req, res) => {
-     const { username, password } = req.body;
-    try {
-      const test = await pool.query('select * from users');
-      console.log(test.rows);
-      const result = await pool.query('SELECT "password_hash" FROM users WHERE email=$1',[username]);
-      if (result.rows[0].password_hash === password) {
-        console.log('success');
-        const token = jwt.sign({ username: username }, 'secret-key');
-        res.send({ token });
-        console.log(token);
-        //res.redirect('http://localhost:3000/dashboard'); 
-     } else {
-       res.status(401).json({ error: 'Invalid credentials' });
-     }
-    } catch (err) {
-      console.log(err.message);
-      res.status(500).json({ error: err.message });
+// Add this to server.js to test DB connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err);
+  } else {
+    console.log('Database connected successfully');
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  try {
+    const result = await pool.query('SELECT password_hash FROM users WHERE email = $1', [username]);
+    
+    if (result.rows.length > 0 && result.rows[0].password_hash === password) {
+      const token = jwt.sign({ username }, 'secret-key');
+      res.status(200).json({ token });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
     }
-   });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
     app.post('/api/signup', async (req, res) => {
      const { username, password } = req.body;
