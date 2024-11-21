@@ -267,9 +267,20 @@ app.post('/api/upload', (req, res) => {
 // Routes
 app.get('/api/design', function (req, res) {
    fs.readFile("data/DesignData.json", 'utf8', function (err, data) {
-      res.end( data );
+      if (err) {
+         console.error('Error reading file:', err);
+         return res.status(500).json({ error: 'Failed to read design data' });
+      }
+      
+      try {
+         const jsonData = JSON.parse(data);
+         res.json(jsonData);  // Send as JSON instead of using res.end()
+      } catch (error) {
+         console.error('JSON parse error:', error);
+         res.status(500).json({ error: 'Invalid JSON data' });
+      }
    });
-})
+});
 
 app.get('/api/designer', function (req, res) {
    fs.readFile("data/DesignerData.json", 'utf8', function (err, data) {
