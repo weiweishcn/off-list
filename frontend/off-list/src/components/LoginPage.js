@@ -10,9 +10,12 @@ const LoginPage = () => {
 
  const handleSubmit = async (e) => {
    e.preventDefault();
-   
+
+  // Add this line to debug
+  console.log('API URL:', process.env.REACT_APP_API_URL);
    try {
-     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/login`, {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
+     const response = await fetch(`${apiUrl}/api/login`, {
        method: 'POST',
        headers: {
          'Content-Type': 'application/json',
