@@ -90,7 +90,7 @@ function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Create Design Request</h2>
+              <h2 className="text-xl font-semibold mb-2">Create Design Request (per room)</h2>
               <p className="text-gray-600">Start a new design project by submitting your requirements</p>
             </div>
           </div>
