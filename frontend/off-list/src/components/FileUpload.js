@@ -71,9 +71,10 @@ const onSubmit = async e => {
   });
 
   try {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
     const endpoint = uploadType === 'floor_plan' 
-      ? 'http://localhost:3001/api/upload-floor-plan/'
-      : 'http://localhost:3001/api/upload/';
+      ? `${apiUrl}/api/upload-floor-plan/`
+      : `${apiUrl}/api/upload/`;
 
     const response = await axios.post(endpoint, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
