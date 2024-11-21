@@ -14,7 +14,8 @@ function DesignList() {
   const [Listing, setListing] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/design')
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
+    fetch(`${apiUrl}/api/design`)
       .then(response => response.json())
       .then(json => setListing(json))
     }
