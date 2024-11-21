@@ -54,7 +54,7 @@ const Signup = () => {
 
     try {
         const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
-      const response = await fetch('${apiUrl}localhost:3001/api/signup', {
+      const response = await fetch('${apiUrl}/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
