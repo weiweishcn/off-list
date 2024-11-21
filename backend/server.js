@@ -266,7 +266,7 @@ app.post('/api/upload', (req, res) => {
 
 // Routes
 app.get('/api/design', function (req, res) {
-   fs.readFile("data/DesignData.json", 'utf8', function (err, data) {
+   fs.readFile("Data/DesignData.json", 'utf8', function (err, data) {
       if (err) {
          console.error('Error reading file:', err);
          return res.status(500).json({ error: 'Failed to read design data' });
@@ -283,7 +283,7 @@ app.get('/api/design', function (req, res) {
 });
 
 app.get('/api/designer', function (req, res) {
-   fs.readFile("data/DesignerData.json", 'utf8', function (err, data) {
+   fs.readFile("Data/designerData.json", 'utf8', function (err, data) {
       res.end( data );
    });
 })
