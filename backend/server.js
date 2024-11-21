@@ -1,4 +1,5 @@
 // server.js
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -9,6 +10,7 @@ const aws = require('aws-sdk');
 const multerS3 = require('multer-s3');
 const multiparty = require('multiparty');
 const jwt = require('jsonwebtoken');
+const { env } = require('process');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -18,11 +20,12 @@ app.use(cors());
 app.use(express.json());
 
 // Database connection
+console.log(env.DB_DATABASE);
 const pool = new Pool({
-  user: 'doadmin',
-  host: 'db-postgresql-nyc3-65932-do-user-18295862-0.k.db.ondigitalocean.com',
-  database: 'defaultdb',
-  password: 'AVNS_CliWQBVIUI24IpBynlW',
+  user: env.DB_USER,
+  host: env.DB_HOST,
+  database: env.DB_DATABASE,
+  password: env.DB_PASSWORD,
   port: 25060,
   ssl: {
     ca: fs.readFileSync("DB/ca-certificate.crt").toString()
@@ -89,7 +92,9 @@ const pool = new Pool({
 //https://designimages.sfo3.digitaloceanspaces.com
 const spacesEndpoint = new aws.Endpoint('sfo3.digitaloceanspaces.com');
 const s3 = new aws.S3({
-  endpoint: spacesEndpoint
+  endpoint: spacesEndpoint,
+  accessKeyId: env.SPACES_KEY,
+  secretAccessKey: env.SPACES_SECRET
 });
 
 // Regular image upload configuration
