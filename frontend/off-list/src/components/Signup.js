@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
     confirmPassword: '',
     activationKey: ''
@@ -12,18 +12,27 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { username, password, confirmPassword, activationKey } = formData;
+  const { email, password, confirmPassword, activationKey } = formData;
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Clear error when user starts typing
     setError('');
   };
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const validateForm = () => {
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return false;
@@ -53,13 +62,12 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
       const response = await fetch(`${apiUrl}/api/signup`, {
-       // const response = await fetch('${apiUrl}/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username,
+          username: email, // Keep username in request for backend compatibility
           password
         }),
       });
@@ -67,9 +75,8 @@ const Signup = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store the token and username
         localStorage.setItem('token', data.token);
-        localStorage.setItem('username', username);
+        localStorage.setItem('username', email);
         navigate('/dashboard');
       } else {
         setError(data.message || 'Registration failed. Please try again.');
@@ -127,16 +134,16 @@ const Signup = () => {
             )}
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
               </label>
               <div className="mt-1">
                 <input
-                  id="username"
-                  name="username"
-                  type="text"
+                  id="email"
+                  name="email"
+                  type="email"
                   required
-                  value={username}
+                  value={email}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
