@@ -55,7 +55,7 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
 
         {/* Image */}
         <img 
-             src={`/images${images[currentIndex]}`}
+             src={`${images[currentIndex]}`}
             alt="Enlarged view"
           className="max-h-[90vh] max-w-[90vw] object-contain"
           onClick={(e) => e.stopPropagation()}
@@ -113,7 +113,7 @@ const DesignCard = ({ design }) => {
         <div className="relative h-64">
           {design.images && design.images[currentImageIndex] && (
             <img 
-            src={`/images${design.images[currentImageIndex]}`}  
+            src={`${design.images[currentImageIndex]}`}  
             alt={`${design.tag} design by ${design.designer}`}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => setIsModalOpen(true)}
