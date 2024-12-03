@@ -22,7 +22,11 @@ app.use(express.json());
 app.use('/images', express.static(path.join(__dirname, 'Data/DesignImages')));
 
 app.use(cors({
-  origin: ['http://165.232.131.137:3000', 'http://localhost:3000'],
+  origin: [
+    'http://165.232.131.137:3000', 
+    'http://localhost:3000',
+    'https://pencildogs.com'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -41,17 +45,7 @@ const pool = new Pool({
   }
 });
 
-// Add this near your other routes
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
-// Make sure your 404 handler is AFTER all other routes
-app.use((req, res) => {
-    res.status(404).send('Not Found');
-});
-
-// Add this to server.js to test DB connection
+// Test DB connection
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Database connection error:', err);
@@ -60,61 +54,7 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  
-  try {
-    const result = await pool.query('SELECT password_hash FROM users WHERE email = $1', [username]);
-    
-    if (result.rows.length > 0 && result.rows[0].password_hash === password) {
-      const token = jwt.sign({ username }, 'secret-key');
-      res.status(200).json({ token });
-    } else {
-      res.status(401).json({ error: 'Invalid credentials' });
-    }
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-    app.post('/api/signup', async (req, res) => {
-     const { username, password } = req.body;
-     console.log(username, password)
-    try {
-      const result = await pool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2)', [username, password]);
-      console.log('success');
-      const token = jwt.sign({ username: username }, 'secret-key');
-      res.send({ token });
-      console.log(token);
-        //res.redirect('http://localhost:3000/dashboard'); 
-    } catch (err) {
-      console.log(err.message);
-      res.status(500).json({ error: err.message });
-    }
-   });
-
-   // Protected route
-  app.get('/dashboard', (req, res) => {
-    console.log("protected dashboard")
-    const token = req.headers['authorization'];
-    if (token) {
-      jwt.verify(token, 'secret-key', (err, decoded) => {
-        if (err) {
-          res.send('Invalid token');
-        } else {
-          res.send(`Welcome, ${decoded.username}!`);
-        }
-      });
-    } else {
-      res.send('Unauthorized');
-    }
-  });
-
-// File upload configuration
-
 // Set S3 endpoint to DigitalOcean Spaces
-//https://designimages.sfo3.digitaloceanspaces.com
 const spacesEndpoint = new aws.Endpoint('sfo3.digitaloceanspaces.com');
 const s3 = new aws.S3({
   endpoint: spacesEndpoint,
@@ -172,7 +112,6 @@ const floorPlanUpload = multer({
     files: 10
   },
   fileFilter: (req, file, cb) => {
-    // Check MIME type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
     
     if (allowedTypes.includes(file.mimetype)) {
@@ -183,7 +122,85 @@ const floorPlanUpload = multer({
   }
 }).array('uploadFiles', 10);
 
-// Regular image upload endpoint
+// API Routes
+app.get('/api/design', function (req, res) {
+  try {
+    console.log('Sending design data:', designData.designs);
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ designs: designData.designs });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get design data',
+      details: error.message 
+    });
+  }
+});
+
+app.get('/api/designer', function (req, res) {
+  fs.readFile("Data/designerData.json", 'utf8', function (err, data) {
+    res.end(data);
+  });
+});
+
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query('SELECT password_hash FROM users WHERE email = $1', [username]);
+    if (result.rows.length > 0 && result.rows[0].password_hash === password) {
+      const token = jwt.sign({ username }, 'secret-key');
+      res.status(200).json({ token });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/signup', async (req, res) => {
+  const { username, password } = req.body;
+  console.log(username, password);
+  try {
+    const result = await pool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2)', [username, password]);
+    console.log('success');
+    const token = jwt.sign({ username: username }, 'secret-key');
+    res.send({ token });
+    console.log(token);
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/properties', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM properties');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Protected route
+app.get('/dashboard', (req, res) => {
+  console.log("protected dashboard");
+  const token = req.headers['authorization'];
+  if (token) {
+    jwt.verify(token, 'secret-key', (err, decoded) => {
+      if (err) {
+        res.send('Invalid token');
+      } else {
+        res.send(`Welcome, ${decoded.username}!`);
+      }
+    });
+  } else {
+    res.send('Unauthorized');
+  }
+});
+
+// Upload endpoints
 app.post('/api/upload', (req, res) => {
   imageUpload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
@@ -211,7 +228,6 @@ app.post('/api/upload', (req, res) => {
   });
 });
 
-// Floor plan upload endpoint
 app.post('/api/upload-floor-plan', (req, res) => {
   floorPlanUpload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
@@ -238,103 +254,14 @@ app.post('/api/upload-floor-plan', (req, res) => {
     }
   });
 });
-/*
-old upload api 
-app.post('/api/upload', (req, res) => {
-  console.log("received upload request");
-    multi_upload(req, res, function (err) {
-    console.log(req.files);
-    //multer error
-    if (err instanceof multer.MulterError) {
-      console.log(err);
-      res
-        .status(500)
-        .send({
-          error: { msg: `multer uploading error: ${err.message}` },
-        })
-        .end();
-      return;
-    } else if (err) {
-      //unknown error
-      if (err.name == 'ExtensionError') {
-        console.log("upload extension error", err.message);
-        res
-          .status(413)
-          .send({ error: { msg: `${err.message}` } })
-          .end();
-      } else {
-        console.log("upload 500 error")
-        res
-          .status(500)
-          .send({ error: { msg: `unknown uploading error: ${err.message}` } })
-          .end();
-      }
-      return;
-    }
-    console.log("upload success");
-    res.status(200).send('file uploaded');
-  });
+
+// Serve static files for React app
+app.use(express.static(path.join(__dirname, '../frontend/off-list/build')));
+
+// Handle React routing
+app.get('*', function(req, res) {
+  res.sendFile(path.join(__dirname, '../frontend/off-list/build', 'index.html'));
 });
-*/
-
-// Routes
-app.get('/api/design', function (req, res) {
-  try {
-    // Log the data being sent
-    console.log('Sending design data:', designData.designs);
-    
-    // Set proper content type
-    res.setHeader('Content-Type', 'application/json');
-    
-    // Send the response
-    res.json({ designs: designData.designs });
-
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ 
-      error: 'Failed to get design data',
-      details: error.message 
-    });
-  }
-});
-
-app.get('/api/designer', function (req, res) {
-   fs.readFile("Data/designerData.json", 'utf8', function (err, data) {
-      res.end( data );
-   });
-})
-
-app.get('/api/properties', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM properties');
-    res.json(result.rows);
-    res.json(designData);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/*
-app.post('/api/properties', upload.array('media', 10), async (req, res) => {
-  try {
-    const { title, price, location, description, type } = req.body;
-    const files = req.files;
-    
-    // Add property to database
-    const result = await pool.query(
-      'INSERT INTO properties (title, price, location, description, type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, price, location, description, type]
-    );
-    
-    // Handle file uploads here
-    // You'll want to store file references in a separate table
-    
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-*/
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
