@@ -1,51 +1,33 @@
-import { useState } from 'react';
-import emailjs from '@emailjs/browser';
+import React from 'react';
 
 const ContactForm = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [stateMessage, setStateMessage] = useState(null);
-  const sendEmail = (e) => {
-    e.persist();
-    e.preventDefault();
-    setIsSubmitting(true);
-    emailjs
-      .sendForm(
-        process.env.REACT_APP_SERVICE_ID,
-        process.env.REACT_APP_TEMPLATE_ID,
-        e.target,
-        process.env.REACT_APP_PUBLIC_KEY
-      )
-      .then(
-        (result) => {
-          setStateMessage('Message sent!');
-          setIsSubmitting(false);
-          setTimeout(() => {
-            setStateMessage(null);
-          }, 5000); // hide message after 5 seconds
-        },
-        (error) => {
-          setStateMessage('Something went wrong, please try again later');
-          setIsSubmitting(false);
-          setTimeout(() => {
-            setStateMessage(null);
-          }, 5000); // hide message after 5 seconds
-        }
-      );
-    
-    // Clears the form after sending the email
-    e.target.reset();
-  };
-  return (
-    <form onSubmit={sendEmail}>
-      <label>Name</label>
-      <input type="text" name="user_name" />
-      <label>Email</label>
-      <input type="email" name="user_email" />
-      <label>Message</label>
-      <textarea name="message" />
-      <input type="submit" value="Send" disabled={isSubmitting} />
-      {stateMessage && <p>{stateMessage}</p>}
-    </form>
-  );
+ const handleEmailClick = () => {
+   window.location.href = 'mailto:support@pencildogs.com';
+ };
+
+ return (
+   <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+     <div className="max-w-3xl mx-auto">
+       <div className="text-center">
+         <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+           Contact Us
+         </h2>
+         <p className="mt-4 text-lg text-gray-500">
+           We'd love to hear from you. Reach us at:
+         </p>
+         <p className="mt-4 text-xl text-blue-600">
+           support@pencildogs.com
+         </p>
+         <button
+           onClick={handleEmailClick}
+           className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg"
+         >
+           Email Us
+         </button>
+       </div>
+     </div>
+   </div>
+ );
 };
+
 export default ContactForm;

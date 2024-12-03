@@ -37,6 +37,12 @@ const LandingPage = ({ onLogin }) => {
               >
                 Sign Up
               </button>
+              <button 
+                onClick={() => window.location.href='/contactus'}
+                className="px-6 py-2 bg-white text-black hover:bg-gray-200 transition-colors rounded-lg"
+              >
+                Contact Us
+              </button>
             </div>
           </div>
         </nav>

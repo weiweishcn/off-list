@@ -11,6 +11,7 @@ import LoginPage from './components/LoginPage';
 import Signup from './components/Signup';
 import CreateDesign from './components/CreateDesign';
 import DashBoard from './components/DashBoard';
+import ContactUs from './components/ContactForm';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="/designRequest" element={<CreateDesign />} />
           <Route path="/dashboard" element={<DashBoard />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/contactus" element={<ContactUs />} />
         </Routes>
       </div>
     </Router>
