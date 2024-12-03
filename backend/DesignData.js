@@ -19,7 +19,7 @@ module.exports = {
       "style": "Modern",
       "images": getDesignImages(1, 20),
       "color": ["black", "white", "wood"],
-      "description": "San Jose 95120",
+      "description": "San Jose",
       "id": 1
     },
     {
@@ -28,7 +28,7 @@ module.exports = {
       "style": "spanish",
       "images": getDesignImages(2, 20),
       "color": ["white", "grey"],
-      "description": "San Mateo 94043",
+      "description": "San Mateo",
       "id": 2
     },
     {
@@ -37,7 +37,7 @@ module.exports = {
       "style": "wabi sabi",
       "images": getDesignImages(3, 14),
       "color": ["light color", "wood"],
-      "description": "Los Angeles 90005",
+      "description": "Los Angeles",
       "id": 3
     },
         {
@@ -46,7 +46,7 @@ module.exports = {
       "style": "Wood",
       "images": getDesignImages(4, 15),
       "color": ["wood"],
-      "description": "Los Angeles 90004",
+      "description": "Los Angeles",
       "id": 4
     },
         {
@@ -55,7 +55,7 @@ module.exports = {
       "style": "Wood",
       "images": getDesignImages(5, 15),
       "color": ["grey"],
-      "description": "San Jose 95123",
+      "description": "Seattle",
       "id": 5
     },
     {
@@ -64,7 +64,7 @@ module.exports = {
       "style": "European",
       "images": getDesignImages(6, 38),
       "color": ["grey"],
-      "description": "Santa Clara 95051",
+      "description": "Santa Clara",
       "id": 6
     }
   ]

@@ -169,6 +169,7 @@ const DesignCard = ({ design }) => {
         </div>
 
         <div className="p-4">
+             <p className="text-gray-700 mb-2">{design.description}</p>
           <div className="flex flex-wrap gap-2">
             {design.style && (
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
