@@ -19,8 +19,8 @@ const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
+// Add this right after your other middleware configurations
 app.use('/images', express.static(path.join(__dirname, 'Data/DesignImages')));
-
 app.use(cors({
   origin: [
     'http://165.232.131.137:3000', 

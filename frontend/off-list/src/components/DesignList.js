@@ -55,7 +55,7 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
 
         {/* Image */}
         <img 
-            src={`${process.env.REACT_APP_IMAGE_URL || ''}${images[currentIndex]}`}
+             src={`/images${images[currentIndex]}`}
             alt="Enlarged view"
           className="max-h-[90vh] max-w-[90vw] object-contain"
           onClick={(e) => e.stopPropagation()}
@@ -113,7 +113,7 @@ const DesignCard = ({ design }) => {
         <div className="relative h-64">
           {design.images && design.images[currentImageIndex] && (
             <img 
-            src={`${process.env.REACT_APP_IMAGE_URL || ''}${design.images[currentImageIndex]}`}
+            src={`/images${design.images[currentImageIndex]}`}  
             alt={`${design.tag} design by ${design.designer}`}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => setIsModalOpen(true)}
