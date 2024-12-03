@@ -55,8 +55,8 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
 
         {/* Image */}
         <img 
-          src={`http://165.232.131.137:3001${images[currentIndex]}`}
-          alt="Enlarged view"
+            src={`${process.env.REACT_APP_IMAGE_URL || ''}${images[currentIndex]}`}
+            alt="Enlarged view"
           className="max-h-[90vh] max-w-[90vw] object-contain"
           onClick={(e) => e.stopPropagation()}
         />
@@ -113,8 +113,8 @@ const DesignCard = ({ design }) => {
         <div className="relative h-64">
           {design.images && design.images[currentImageIndex] && (
             <img 
-              src={`http://165.232.131.137:3001${design.images[currentImageIndex]}`}
-              alt={`${design.tag} design by ${design.designer}`}
+            src={`${process.env.REACT_APP_IMAGE_URL || ''}${design.images[currentImageIndex]}`}
+            alt={`${design.tag} design by ${design.designer}`}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => setIsModalOpen(true)}
               onError={(e) => {
@@ -215,11 +215,13 @@ const DesignList = () => {
   useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
+        const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
+        //const apiUrl = process.env.REACT_APP_API_URL;
+        //const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
         //const apiUrl = "http://localhost:3001";
-        console.log('Fetching from:', `${apiUrl}/api/design`);
+        console.log('Fetching from:', `${apiUrl}/design`);
         
-        const response = await fetch(`${apiUrl}/api/design`);
+        const response = await fetch(`${apiUrl}/design`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
