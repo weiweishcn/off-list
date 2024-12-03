@@ -218,9 +218,9 @@ const DesignList = () => {
         //const apiUrl = process.env.REACT_APP_API_URL;
         //const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
         //const apiUrl = "http://localhost:3001";
-        console.log('Fetching from:', `${apiUrl}/design`);
+        console.log('Fetching from:', `${apiUrl}/api/design`);
         
-        const response = await fetch(`${apiUrl}/design`);
+        const response = await fetch(`${apiUrl}/api/design`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
