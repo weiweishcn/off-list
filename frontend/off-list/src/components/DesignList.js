@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const LoadingState = () => (
   <div className="flex justify-center items-center min-h-[200px]">
@@ -21,6 +21,62 @@ const EmptyState = () => (
   </div>
 );
 
+const LazyImage = ({ src, alt, className, onClick }) => {
+  // Format the image URL properly - remove /api from image paths
+  const formattedSrc = src?.startsWith('http') 
+    ? src 
+    : `${(process.env.REACT_APP_API_URL || 'https://pencildogs.com').replace(/\/api$/, '')}${src}`;
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const imgRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: '50px' // Start loading images when they're 50px from viewport
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.disconnect();
+      }
+    };
+  }, []);
+
+  return (
+    <div ref={imgRef} className={className}>
+      {isVisible && (
+        <img
+          src={formattedSrc}
+          alt={alt}
+          className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          onClick={onClick}
+          onLoad={() => setIsLoaded(true)}
+          onError={(e) => {
+            console.error(`Failed to load image: ${e.target.src}`);
+            e.target.onerror = null;
+            e.target.src = `${process.env.REACT_APP_API_URL || ''}/api/placeholder/400/320`;
+          }}
+        />
+      )}
+      {!isLoaded && isVisible && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+      )}
+    </div>
+  );
+};
+
 const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
   if (!images) return null;
 
@@ -28,7 +84,7 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
     <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
          onClick={onClose}>
       <div className="relative w-full h-full flex items-center justify-center p-4">
-        {/* Close button */}
+        {/* Close button - unchanged */}
         <button 
           className="absolute top-4 right-4 text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full"
           onClick={onClose}
@@ -53,10 +109,10 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
           </button>
         )}
 
-        {/* Image */}
-        <img 
-             src={`${images[currentIndex]}`}
-            alt="Enlarged view"
+        {/* Using LazyImage in modal */}
+        <LazyImage 
+          src={images[currentIndex]}
+          alt="Enlarged view"
           className="max-h-[90vh] max-w-[90vw] object-contain"
           onClick={(e) => e.stopPropagation()}
         />
@@ -112,16 +168,11 @@ const DesignCard = ({ design }) => {
       <div className="bg-white rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:shadow-xl hover:-translate-y-1">
         <div className="relative h-64">
           {design.images && design.images[currentImageIndex] && (
-            <img 
-            src={`${design.images[currentImageIndex]}`}  
-            alt={`${design.tag} design by ${design.designer}`}
+            <LazyImage 
+              src={design.images[currentImageIndex]}
+              alt={`${design.tag} design by ${design.designer}`}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => setIsModalOpen(true)}
-              onError={(e) => {
-                console.error(`Failed to load image: ${e.target.src}`);
-                e.target.onerror = null;
-                e.target.src = "https://via.placeholder.com/400";
-              }}
             />
           )}
 
@@ -169,7 +220,7 @@ const DesignCard = ({ design }) => {
         </div>
 
         <div className="p-4">
-             <p className="text-gray-700 mb-2">{design.description}</p>
+          <p className="text-gray-700 mb-2">{design.description}</p>
           <div className="flex flex-wrap gap-2">
             {design.style && (
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
@@ -207,6 +258,7 @@ const DesignCard = ({ design }) => {
   );
 };
 
+// DesignList component remains unchanged
 const DesignList = () => {
   const [designs, setDesigns] = useState([]);
   const [error, setError] = useState(null);
@@ -216,9 +268,6 @@ const DesignList = () => {
     const fetchDesigns = async () => {
       try {
         const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
-        //const apiUrl = process.env.REACT_APP_API_URL;
-        //const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
-        //const apiUrl = "http://localhost:3001";
         console.log('Fetching from:', `${apiUrl}/api/design`);
         
         const response = await fetch(`${apiUrl}/api/design`);
