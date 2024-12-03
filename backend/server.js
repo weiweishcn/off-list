@@ -145,17 +145,27 @@ app.get('/api/designer', function (req, res) {
 
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
+  console.log('Login attempt:', { username, passwordLength: password?.length });
+  
   try {
+    console.log('Executing query...');
     const result = await pool.query('SELECT password_hash FROM users WHERE email = $1', [username]);
+    console.log('Query result:', result.rows);
+    
     if (result.rows.length > 0 && result.rows[0].password_hash === password) {
       const token = jwt.sign({ username }, 'secret-key');
+      console.log('Login successful, sending token');
       res.status(200).json({ token });
     } else {
+      console.log('Invalid credentials - no match found');
       res.status(401).json({ error: 'Invalid credentials' });
     }
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ 
+      error: 'Server error', 
+      details: err.message 
+    });
   }
 });
 
