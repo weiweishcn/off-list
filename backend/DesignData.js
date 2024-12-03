@@ -37,7 +37,7 @@ module.exports = {
       "style": "wabi sabi",
       "images": getDesignImages(3, 14),
       "color": ["light color", "wood"],
-      "description": "Los Angeles",
+      "description": "Los Angeles, CA",
       "id": 3
     },
         {
