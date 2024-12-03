@@ -41,6 +41,16 @@ const pool = new Pool({
   }
 });
 
+// Add this near your other routes
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
+// Make sure your 404 handler is AFTER all other routes
+app.use((req, res) => {
+    res.status(404).send('Not Found');
+});
+
 // Add this to server.js to test DB connection
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
