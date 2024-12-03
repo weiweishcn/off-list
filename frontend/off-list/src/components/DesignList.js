@@ -55,7 +55,7 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
 
         {/* Image */}
         <img 
-          src={`apiUrl${images[currentIndex]}`}
+          src={`http://165.232.131.137:3001${images[currentIndex]}`}
           alt="Enlarged view"
           className="max-h-[90vh] max-w-[90vw] object-contain"
           onClick={(e) => e.stopPropagation()}
