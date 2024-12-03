@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import backgroundImage from './designshow.jpg'; // Import the image
+import DesignList from './DesignList';
 
 const LandingPage = ({ onLogin }) => {
   return (
@@ -63,25 +64,10 @@ const LandingPage = ({ onLogin }) => {
         </div>
       </div>
 
-      {/* Featured Designs Grid */}
-      <div className="max-w-7xl mx-auto py-16 px-4">
-        <h3 className="text-3xl font-bold text-center mb-12">Featured Designs</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="group relative overflow-hidden rounded-lg aspect-square shadow-lg">
-              <img 
-                src={backgroundImage} 
-                alt={`Featured design ${i}`}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                <div className="p-6 text-white">
-                  <h4 className="text-xl font-bold">Design Project {i}</h4>
-                  <p className="text-sm opacity-90">Modern Interior Design</p>
-                </div>
-              </div>
-            </div>
-          ))}
+      {/* Design List Section */}
+      <div className="bg-white">
+        <div className="relative z-10">
+           <DesignList />
         </div>
       </div>
     </div>

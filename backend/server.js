@@ -11,12 +11,15 @@ const multerS3 = require('multer-s3');
 const multiparty = require('multiparty');
 const jwt = require('jsonwebtoken');
 const { env } = require('process');
+const designData = require('./DesignData');
+console.log('Loaded design data:', designData);
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
+app.use('/images', express.static(path.join(__dirname, 'Data/DesignImages')));
 
 app.use(cors({
   origin: ['http://165.232.131.137:3000', 'http://localhost:3000'],
@@ -266,20 +269,23 @@ app.post('/api/upload', (req, res) => {
 
 // Routes
 app.get('/api/design', function (req, res) {
-   fs.readFile("Data/DesignData.json", 'utf8', function (err, data) {
-      if (err) {
-         console.error('Error reading file:', err);
-         return res.status(500).json({ error: 'Failed to read design data' });
-      }
-      
-      try {
-         const jsonData = JSON.parse(data);
-         res.json(jsonData);  // Send as JSON instead of using res.end()
-      } catch (error) {
-         console.error('JSON parse error:', error);
-         res.status(500).json({ error: 'Invalid JSON data' });
-      }
-   });
+  try {
+    // Log the data being sent
+    console.log('Sending design data:', designData.designs);
+    
+    // Set proper content type
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Send the response
+    res.json({ designs: designData.designs });
+
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get design data',
+      details: error.message 
+    });
+  }
 });
 
 app.get('/api/designer', function (req, res) {
