@@ -23,7 +23,7 @@ const LandingPage = ({ onLogin }) => {
         {/* Navigation */}
         <nav className="relative z-10 p-6">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 className="text-white text-3xl font-bold">Rondo</h1>
+            <h1 className="text-white text-3xl font-bold">Pencil Dogs</h1>
             <div className="space-x-4">
               <button 
                 onClick={() => window.location.href='/login'}
