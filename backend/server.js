@@ -13,7 +13,6 @@ const jwt = require('jsonwebtoken');
 const { env } = require('process');
 const designData = require('./DesignData');
 console.log('Loaded design data:', designData);
-const compression = require('compression');
 const zlib = require('zlib');
 
 const app = express();
