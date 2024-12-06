@@ -13,24 +13,86 @@ const jwt = require('jsonwebtoken');
 const { env } = require('process');
 const designData = require('./DesignData');
 console.log('Loaded design data:', designData);
+const compression = require('compression');
+const zlib = require('zlib');
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Middleware
-app.use(express.json());
-// Add this right after your other middleware configurations
-app.use('/images', express.static(path.join(__dirname, 'Data/DesignImages')));
-app.use(cors({
-  origin: [
-    'http://165.232.131.137:3000', 
-    'http://localhost:3000',
-    'https://pencildogs.com'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+app.use((req, res, next) => {
+  console.log('Incoming request:', {
+    path: req.path,
+    acceptEncoding: req.headers['accept-encoding']
+  });
+  next();
+});
+
+// Configure compression with debug logging
+const customCompression = (req, res, next) => {
+  const _send = res.send;
+  res.send = function (body) {
+    if (req.headers['accept-encoding']?.includes('gzip')) {
+      // Only compress JSON responses
+      if (typeof body === 'string' || Buffer.isBuffer(body)) {
+        zlib.gzip(body, (err, compressed) => {
+          if (err) {
+            console.error('Compression error:', err);
+            return _send.call(this, body);
+          }
+
+          res.setHeader('Content-Encoding', 'gzip');
+          res.setHeader('Vary', 'Accept-Encoding');
+          
+          // Log compression stats
+          const originalSize = Buffer.byteLength(body);
+          const compressedSize = Buffer.byteLength(compressed);
+          console.log('Compression stats:', {
+            originalSize,
+            compressedSize,
+            ratio: ((originalSize - compressedSize) / originalSize * 100).toFixed(2) + '%'
+          });
+
+          _send.call(this, compressed);
+        });
+        return;
+      }
+    }
+    _send.call(this, body);
+  };
+  next();
+};
+
+app.use(customCompression);
+
+// More detailed response logging
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  const originalJson = res.json;
+
+  res.send = function(...args) {
+    console.log('Response send headers:', {
+      path: req.path,
+      contentEncoding: res.getHeader('content-encoding'),
+      contentLength: res.getHeader('content-length'),
+      contentType: res.getHeader('content-type'),
+      vary: res.getHeader('vary')
+    });
+    return originalSend.apply(res, args);
+  };
+
+  res.json = function(...args) {
+    console.log('Response json headers:', {
+      path: req.path,
+      contentEncoding: res.getHeader('content-encoding'),
+      contentLength: res.getHeader('content-length'),
+      contentType: res.getHeader('content-type'),
+      vary: res.getHeader('vary')
+    });
+    return originalJson.apply(res, args);
+  };
+
+  next();
+});
 
 // Database connection
 console.log(env.DB_DATABASE);
@@ -153,12 +215,11 @@ const floorPlanUpload = multer({
   }
 }).array('uploadFiles', 10);
 
+// Modified /api/design endpoint with explicit compression handling
 app.get('/api/design', async function (req, res) {
   try {
-    // Get design data from the DesignData.js module
     const designData = require('./DesignData');
     
-    // Fetch images for each design based on their folder
     const designsWithImages = await Promise.all(
       designData.designs.map(async (design) => {
         if (!design.folder) {
@@ -166,16 +227,24 @@ app.get('/api/design', async function (req, res) {
         }
         
         const s3Images = await listS3FolderContents(design.folder);
-        // Always return S3 images and ignore the local paths
         return {
           ...design,
-          images: s3Images
+          images: s3Images.length > 0 ? s3Images : design.images
         };
       })
     );
 
-    console.log('Sending designs with images:', designsWithImages);
-    res.json({ designs: designsWithImages });
+    // Set headers explicitly
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    // Log response size before compression
+    const responseData = { designs: designsWithImages };
+    const responseSize = Buffer.byteLength(JSON.stringify(responseData));
+    console.log('Response size before compression:', responseSize, 'bytes');
+
+    // Send response
+    res.json(responseData);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ 
@@ -184,6 +253,7 @@ app.get('/api/design', async function (req, res) {
     });
   }
 });
+
 
 app.get('/api/designer', function (req, res) {
   fs.readFile("Data/designerData.json", 'utf8', function (err, data) {
