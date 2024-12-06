@@ -18,6 +18,7 @@ module.exports = {
       "tag": "Modern",
       "style": "Modern",
       "images": getDesignImages(1, 20),
+      "folder": "design1/",
       "color": ["black", "white", "wood"],
       "description": "San Jose, CA",
       "id": 1
@@ -27,6 +28,7 @@ module.exports = {
       "tag": "old-fashioned",
       "style": "spanish",
       "images": getDesignImages(2, 20),
+      "folder": "design2/",
       "color": ["white", "grey"],
       "description": "Queens, NY",
       "id": 2
@@ -36,6 +38,7 @@ module.exports = {
       "tag": "Wood",
       "style": "wabi sabi",
       "images": getDesignImages(3, 14),
+      "folder": "design3/",
       "color": ["light color", "wood"],
       "description": "Los Angeles, CA",
       "id": 3
@@ -45,6 +48,7 @@ module.exports = {
       "tag": "Log Style",
       "style": "Wood",
       "images": getDesignImages(4, 15),
+      "folder": "design4/",
       "color": ["wood"],
       "description": "Los Angeles, CA",
       "id": 4
@@ -54,6 +58,7 @@ module.exports = {
       "tag": "Modern Chinese",
       "style": "Wood",
       "images": getDesignImages(5, 15),
+      "folder": "design5/",
       "color": ["grey"],
       "description": "Seattle, WA",
       "id": 5
@@ -63,6 +68,7 @@ module.exports = {
       "tag": "European",
       "style": "European",
       "images": getDesignImages(6, 38),
+      "folder": "design6/",
       "color": ["grey"],
       "description": "Santa Clara, CA",
       "id": 6

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// ... other components remain the same (LoadingState, ErrorState, EmptyState) ...
 const LoadingState = () => (
   <div className="flex justify-center items-center min-h-[200px]">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -21,62 +22,7 @@ const EmptyState = () => (
   </div>
 );
 
-const LazyImage = ({ src, alt, className, onClick }) => {
-  // Format the image URL properly - remove /api from image paths
-  const formattedSrc = src?.startsWith('http') 
-    ? src 
-    : `${(process.env.REACT_APP_API_URL || 'https://pencildogs.com').replace(/\/api$/, '')}${src}`;
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const imgRef = useRef();
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      {
-        rootMargin: '50px' // Start loading images when they're 50px from viewport
-      }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => {
-      if (imgRef.current) {
-        observer.disconnect();
-      }
-    };
-  }, []);
-
-  return (
-    <div ref={imgRef} className={className}>
-      {isVisible && (
-        <img
-          src={formattedSrc}
-          alt={alt}
-          className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-          onClick={onClick}
-          onLoad={() => setIsLoaded(true)}
-          onError={(e) => {
-            console.error(`Failed to load image: ${e.target.src}`);
-            e.target.onerror = null;
-            e.target.src = `${process.env.REACT_APP_API_URL || ''}/api/placeholder/400/320`;
-          }}
-        />
-      )}
-      {!isLoaded && isVisible && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-      )}
-    </div>
-  );
-};
-
+// ... ImageModal component remains the same ...
 const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
   if (!images) return null;
 
@@ -141,9 +87,96 @@ const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
   );
 };
 
+const LazyImage = ({ src, alt, className, onClick, priority = false }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const imgRef = useRef();
+
+  useEffect(() => {
+    if (priority) {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: '100px' // Increased from 50px to start loading earlier
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.disconnect();
+      }
+    };
+  }, [priority]);
+
+  return (
+    <div ref={imgRef} className={`relative ${className}`}>
+      {(isVisible || priority) && (
+        <img
+          src={src || '/api/placeholder/400/320'}
+          alt={alt}
+          className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          onClick={onClick}
+          onLoad={() => setIsLoaded(true)}
+          onError={(e) => {
+            console.error(`Failed to load image: ${e.target.src}`);
+            e.target.onerror = null;
+            e.target.src = '/api/placeholder/400/320';
+          }}
+        />
+      )}
+      {!isLoaded && (isVisible || priority) && (
+        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+      )}
+    </div>
+  );
+};
+
+// Image preloader component
+const ImagePreloader = ({ src }) => {
+  useEffect(() => {
+    if (src) {
+      const img = new Image();
+      img.src = src;
+    }
+  }, [src]);
+  return null;
+};
+
 const DesignCard = ({ design }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [preloadedImages, setPreloadedImages] = useState(new Set());
+
+  // Preload adjacent images
+  useEffect(() => {
+    if (!design.images) return;
+
+    const imagesToPreload = new Set();
+    const totalImages = design.images.length;
+
+    // Add next image
+    const nextIndex = (currentImageIndex + 1) % totalImages;
+    imagesToPreload.add(design.images[nextIndex]);
+
+    // Add previous image
+    const prevIndex = currentImageIndex === 0 ? totalImages - 1 : currentImageIndex - 1;
+    imagesToPreload.add(design.images[prevIndex]);
+
+    setPreloadedImages(imagesToPreload);
+  }, [currentImageIndex, design.images]);
 
   const nextImage = (e) => {
     e?.stopPropagation();
@@ -167,15 +200,23 @@ const DesignCard = ({ design }) => {
     <>
       <div className="bg-white rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:shadow-xl hover:-translate-y-1">
         <div className="relative h-64">
+          {/* Current image with priority loading */}
           {design.images && design.images[currentImageIndex] && (
             <LazyImage 
               src={design.images[currentImageIndex]}
               alt={`${design.tag} design by ${design.designer}`}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => setIsModalOpen(true)}
+              priority={true}
             />
           )}
 
+          {/* Preload adjacent images */}
+          {Array.from(preloadedImages).map((src) => (
+            <ImagePreloader key={src} src={src} />
+          ))}
+
+          {/* Navigation buttons */}
           {hasMultipleImages && (
             <>
               <button 
@@ -198,6 +239,7 @@ const DesignCard = ({ design }) => {
                 </svg>
               </button>
 
+              {/* Image indicators */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2">
                 {design.images.map((_, index) => (
                   <button
@@ -219,6 +261,7 @@ const DesignCard = ({ design }) => {
           )}
         </div>
 
+        {/* Rest of the card content */}
         <div className="p-4">
           <p className="text-gray-700 mb-2">{design.description}</p>
           <div className="flex flex-wrap gap-2">
@@ -244,7 +287,7 @@ const DesignCard = ({ design }) => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal with preloading */}
       {isModalOpen && (
         <ImageModal 
           images={design.images}
@@ -258,7 +301,8 @@ const DesignCard = ({ design }) => {
   );
 };
 
-// DesignList component remains unchanged
+
+
 const DesignList = () => {
   const [designs, setDesigns] = useState([]);
   const [error, setError] = useState(null);
@@ -267,7 +311,8 @@ const DesignList = () => {
   useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
+        //const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
+        const apiUrl = 'http://localhost:3001';
         console.log('Fetching from:', `${apiUrl}/api/design`);
         
         const response = await fetch(`${apiUrl}/api/design`);
@@ -277,7 +322,7 @@ const DesignList = () => {
         }
         
         const data = await response.json();
-        console.log('Fetched data:', data);
+        console.log('Fetched design data:', data);
         
         if (data && data.designs) {
           setDesigns(data.designs);

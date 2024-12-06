@@ -62,6 +62,37 @@ const s3 = new aws.S3({
   secretAccessKey: env.SPACES_SECRET
 });
 
+const listS3FolderContents = async (folderPrefix) => {
+  const params = {
+    Bucket: 'designimages',
+    Prefix: folderPrefix
+  };
+
+  try {
+    const data = await s3.listObjects(params).promise();
+    // Sort the contents to ensure consistent order
+    const sortedContents = data.Contents
+      .filter(object => object.Key.match(/\.(jpg|jpeg|png|gif)$/i))
+      .sort((a, b) => {
+        // Extract numbers from filenames for natural sorting
+        const numA = parseInt(a.Key.match(/\d+/g).pop());
+        const numB = parseInt(b.Key.match(/\d+/g).pop());
+        return numA - numB;
+      });
+
+    return sortedContents.map(object => {
+      // Make sure we don't double-include the folder name
+      const key = object.Key.startsWith(folderPrefix) 
+        ? object.Key 
+        : `${folderPrefix}${object.Key}`;
+      return `https://designimages.sfo3.digitaloceanspaces.com/${key}`;
+    });
+  } catch (error) {
+    console.error('Error listing S3 objects:', error);
+    return [];
+  }
+};
+
 // Regular image upload configuration
 const imageUpload = multer({
   storage: multerS3({
@@ -122,12 +153,29 @@ const floorPlanUpload = multer({
   }
 }).array('uploadFiles', 10);
 
-// API Routes
-app.get('/api/design', function (req, res) {
+app.get('/api/design', async function (req, res) {
   try {
-    console.log('Sending design data:', designData.designs);
-    res.setHeader('Content-Type', 'application/json');
-    res.json({ designs: designData.designs });
+    // Get design data from the DesignData.js module
+    const designData = require('./DesignData');
+    
+    // Fetch images for each design based on their folder
+    const designsWithImages = await Promise.all(
+      designData.designs.map(async (design) => {
+        if (!design.folder) {
+          return design;
+        }
+        
+        const s3Images = await listS3FolderContents(design.folder);
+        // Always return S3 images and ignore the local paths
+        return {
+          ...design,
+          images: s3Images
+        };
+      })
+    );
+
+    console.log('Sending designs with images:', designsWithImages);
+    res.json({ designs: designsWithImages });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ 
