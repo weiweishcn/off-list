@@ -222,7 +222,7 @@ const DesignList = () => {
   useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
+        const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com';
         const response = await fetch(`${apiUrl}/api/design`);
         
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
