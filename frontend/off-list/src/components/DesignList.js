@@ -21,115 +21,56 @@ const EmptyState = () => (
     <p className="text-lg">No designs found</p>
   </div>
 );
-
-// ... ImageModal component remains the same ...
-const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious }) => {
-  if (!images) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
-         onClick={onClose}>
-      <div className="relative w-full h-full flex items-center justify-center p-4">
-        {/* Close button - unchanged */}
-        <button 
-          className="absolute top-4 right-4 text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full"
-          onClick={onClose}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* Previous button */}
-        {images.length > 1 && (
-          <button 
-            className="absolute left-4 text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPrevious();
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-
-        {/* Using LazyImage in modal */}
-        <LazyImage 
-          src={images[currentIndex]}
-          alt="Enlarged view"
-          className="max-h-[90vh] max-w-[90vw] object-contain"
-          onClick={(e) => e.stopPropagation()}
-        />
-
-        {/* Next button */}
-        {images.length > 1 && (
-          <button 
-            className="absolute right-4 text-white p-2 hover:bg-white hover:bg-opacity-20 rounded-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-
-        {/* Image counter */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white">
-          {currentIndex + 1} / {images.length}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const LazyImage = ({ src, alt, className, onClick, priority = false }) => {
+// Progressive Image component that loads a small blur first
+const ProgressiveImage = ({ src, alt, className, onClick, priority = false }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(null);
   const imgRef = useRef();
 
+  // Generate a low-quality image URL for initial quick load
+  const thumbnailSrc = src ? (
+    src.includes('digitaloceanspaces.com') 
+      ? `${src}?w=10` // Very small image for quick load
+      : src
+  ) : null;
+
   useEffect(() => {
-    if (priority) {
-      setIsVisible(true);
-      return;
-    }
+    // Reset state when src changes
+    setIsLoaded(false);
+    setCurrentSrc(thumbnailSrc);
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      {
-        rootMargin: '100px' // Increased from 50px to start loading earlier
-      }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => {
-      if (imgRef.current) {
-        observer.disconnect();
-      }
+    // Preload high quality image
+    const highQualityImage = new Image();
+    highQualityImage.src = src;
+    highQualityImage.onload = () => {
+      setCurrentSrc(src);
+      setIsLoaded(true);
     };
-  }, [priority]);
+  }, [src, thumbnailSrc]);
 
   return (
-    <div ref={imgRef} className={`relative ${className}`}>
-      {(isVisible || priority) && (
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* Low quality placeholder */}
+      {thumbnailSrc && (
         <img
-          src={src || '/api/placeholder/400/320'}
+          src={thumbnailSrc}
           alt={alt}
-          className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          className={`absolute inset-0 w-full h-full object-cover blur-lg scale-105 ${
+            isLoaded ? 'opacity-0' : 'opacity-100'
+          } transition-opacity duration-300`}
+        />
+      )}
+
+      {/* Main image */}
+      {currentSrc && (
+        <img
+          ref={imgRef}
+          src={currentSrc}
+          alt={alt}
           onClick={onClick}
-          onLoad={() => setIsLoaded(true)}
+          className={`w-full h-full object-cover ${
+            isLoaded ? 'opacity-100' : 'opacity-0'
+          } transition-all duration-500`}
           onError={(e) => {
             console.error(`Failed to load image: ${e.target.src}`);
             e.target.onerror = null;
@@ -137,171 +78,141 @@ const LazyImage = ({ src, alt, className, onClick, priority = false }) => {
           }}
         />
       )}
-      {!isLoaded && (isVisible || priority) && (
+
+      {/* Loading skeleton */}
+      {!isLoaded && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse" />
       )}
     </div>
   );
 };
 
-// Image preloader component
-const ImagePreloader = ({ src }) => {
+// Virtual list component for efficient rendering
+const VirtualizedDesignList = ({ designs }) => {
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 6 });
+  const containerRef = useRef(null);
+
   useEffect(() => {
-    if (src) {
-      const img = new Image();
-      img.src = src;
-    }
-  }, [src]);
-  return null;
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      
+      const rect = containerRef.current.getBoundingClientRect();
+      const buffer = window.innerHeight;
+      
+      // Check if container is near viewport
+      if (rect.top - buffer < window.innerHeight && rect.bottom + buffer > 0) {
+        // Load more items when user scrolls near the end
+        setVisibleRange(prev => ({
+          start: 0,
+          end: Math.min(prev.end + 3, designs.length)
+        }));
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [designs.length]);
+
+  return (
+    <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {designs.slice(0, visibleRange.end).map((design) => (
+        <DesignCard 
+          key={design.id} 
+          design={design}
+          priority={visibleRange.end <= 6} // Prioritize loading first 6 items
+        />
+      ))}
+    </div>
+  );
 };
 
-const DesignCard = ({ design }) => {
+const DesignCard = ({ design, priority = false }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [preloadedImages, setPreloadedImages] = useState(new Set());
 
-  // Preload adjacent images
+  // Preload next images
   useEffect(() => {
-    if (!design.images) return;
+    if (!design.images || !priority) return;
 
-    const imagesToPreload = new Set();
-    const totalImages = design.images.length;
-
-    // Add next image
-    const nextIndex = (currentImageIndex + 1) % totalImages;
-    imagesToPreload.add(design.images[nextIndex]);
-
-    // Add previous image
-    const prevIndex = currentImageIndex === 0 ? totalImages - 1 : currentImageIndex - 1;
-    imagesToPreload.add(design.images[prevIndex]);
-
-    setPreloadedImages(imagesToPreload);
-  }, [currentImageIndex, design.images]);
+    const nextIndex = (currentImageIndex + 1) % design.images.length;
+    const nextImage = new Image();
+    nextImage.src = design.images[nextIndex];
+  }, [currentImageIndex, design.images, priority]);
 
   const nextImage = (e) => {
     e?.stopPropagation();
-    if (design.images && design.images.length > 0) {
+    if (design.images?.length) {
       setCurrentImageIndex((prev) => (prev + 1) % design.images.length);
     }
   };
 
   const previousImage = (e) => {
     e?.stopPropagation();
-    if (design.images && design.images.length > 0) {
+    if (design.images?.length) {
       setCurrentImageIndex((prev) => 
         prev === 0 ? design.images.length - 1 : prev - 1
       );
     }
   };
 
-  const hasMultipleImages = design.images && design.images.length > 1;
-
   return (
-    <>
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden transition-transform duration-300 hover:shadow-xl hover:-translate-y-1">
-        <div className="relative h-64">
-          {/* Current image with priority loading */}
-          {design.images && design.images[currentImageIndex] && (
-            <LazyImage 
-              src={design.images[currentImageIndex]}
-              alt={`${design.tag} design by ${design.designer}`}
-              className="w-full h-full object-cover cursor-pointer"
-              onClick={() => setIsModalOpen(true)}
-              priority={true}
-            />
-          )}
-
-          {/* Preload adjacent images */}
-          {Array.from(preloadedImages).map((src) => (
-            <ImagePreloader key={src} src={src} />
-          ))}
-
-          {/* Navigation buttons */}
-          {hasMultipleImages && (
-            <>
-              <button 
-                onClick={previousImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all duration-200"
-                aria-label="Previous image"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              <button 
-                onClick={nextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all duration-200"
-                aria-label="Next image"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              {/* Image indicators */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2">
-                {design.images.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentImageIndex(index);
-                    }}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      index === currentImageIndex 
-                        ? 'bg-white scale-110' 
-                        : 'bg-white bg-opacity-50 hover:bg-opacity-75'
-                    }`}
-                    aria-label={`Go to image ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Rest of the card content */}
-        <div className="p-4">
-          <p className="text-gray-700 mb-2">{design.description}</p>
-          <div className="flex flex-wrap gap-2">
-            {design.style && (
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                Style: {design.style}
-              </span>
-            )}
-            {design.tag && (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
-                Tag: {design.tag}
-              </span>
-            )}
-            {design.color && design.color.map((c, index) => (
-              <span 
-                key={index} 
-                className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm"
-              >
-                Color: {c}
-              </span>
-            ))}
+     <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+      <div className="relative h-64">
+        <ProgressiveImage
+          src={design.images?.[currentImageIndex]}
+          alt={`${design.tag} design by ${design.designer}`}
+          className="w-full h-full"
+          onClick={() => setIsModalOpen(true)}
+          priority={priority}
+        />
+        
+        {/* Navigation buttons */}
+        {design.images?.length > 1 && (
+          <div className="absolute inset-0 flex items-center justify-between px-2">
+            <button
+              onClick={previousImage}
+              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            >
+              ←
+            </button>
+            <button
+              onClick={nextImage}
+              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            >
+              →
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Modal with preloading */}
-      {isModalOpen && (
-        <ImageModal 
-          images={design.images}
-          currentIndex={currentImageIndex}
-          onClose={() => setIsModalOpen(false)}
-          onNext={() => nextImage()}
-          onPrevious={() => previousImage()}
-        />
-      )}
-    </>
+      <div className="p-4">
+        <p className="text-gray-700 mt-2">{design.description}</p>
+        <div className="flex flex-wrap gap-2">
+          {design.style && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+              Style: {design.style}
+            </span>
+          )}
+          {design.tag && (
+            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+              Tag: {design.tag}
+            </span>
+          )}
+          {design.color && design.color.map((c, index) => (
+            <span 
+              key={index} 
+              className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm"
+            >
+              Color: {c}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
-
-
 
 const DesignList = () => {
   const [designs, setDesigns] = useState([]);
@@ -311,20 +222,13 @@ const DesignList = () => {
   useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        //const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
-        const apiUrl = 'http://localhost:3001';
-        console.log('Fetching from:', `${apiUrl}/api/design`);
-        
+        const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com/api';
         const response = await fetch(`${apiUrl}/api/design`);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const data = await response.json();
-        console.log('Fetched design data:', data);
-        
-        if (data && data.designs) {
+        if (data?.designs) {
           setDesigns(data.designs);
         } else {
           throw new Error('Invalid data format');
@@ -342,16 +246,12 @@ const DesignList = () => {
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} />;
-  if (!designs || designs.length === 0) return <EmptyState />;
+  if (!designs.length) return <EmptyState />;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h2 className="text-3xl font-bold text-center mb-12">Featured Designs</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {designs.map((design) => (
-          <DesignCard key={design.id} design={design} />
-        ))}
-      </div>
+      <VirtualizedDesignList designs={designs} />
     </div>
   );
 };
