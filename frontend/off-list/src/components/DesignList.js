@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // ... other components remain the same (LoadingState, ErrorState, EmptyState) ...
 const LoadingState = () => (
@@ -128,149 +128,238 @@ const VirtualizedDesignList = ({ designs }) => {
   );
 };
 
-const DesignCard = ({ design, priority = false }) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [touchStart, setTouchStart] = useState(null);
+const ImageModal = ({ images, currentIndex, onClose, onNext, onPrevious, design }) => {
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    console.error('Invalid or empty images array');
+    return null;
+  }
 
-  // Handle touch events for swiping
-  const handleTouchStart = (e) => {
-    setTouchStart(e.touches[0].clientX);
-  };
+  const currentImage = images[currentIndex];
+  if (!currentImage) {
+    console.error('Invalid current image index');
+    return null;
+  }
 
-  const handleTouchMove = (e) => {
-    if (!touchStart) return;
-
-    const touchEnd = e.touches[0].clientX;
-    const diff = touchStart - touchEnd;
-
-    if (Math.abs(diff) > 50) { // Minimum swipe distance
-      if (diff > 0) {
-        // Swipe left - next image
-        nextImage();
-      } else {
-        // Swipe right - previous image
-        previousImage();
-      }
-      setTouchStart(null);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setTouchStart(null);
-  };
-
-  // Preload next images
-  useEffect(() => {
-    if (!design.images || !priority) return;
-
-    const nextIndex = (currentImageIndex + 1) % design.images.length;
-    const nextImage = new Image();
-    nextImage.src = design.images[nextIndex];
-  }, [currentImageIndex, design.images, priority]);
-
-  const nextImage = (e) => {
-    e?.stopPropagation();
-    if (design.images?.length) {
-      setCurrentImageIndex((prev) => (prev + 1) % design.images.length);
-    }
-  };
-
-  const previousImage = (e) => {
-    e?.stopPropagation();
-    if (design.images?.length) {
-      setCurrentImageIndex((prev) => 
-        prev === 0 ? design.images.length - 1 : prev - 1
-      );
-    }
+  const handleClose = (e) => {
+    e.stopPropagation();
+    onClose();
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+    <div 
+      className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center"
+      onClick={handleClose}
+    >
       <div 
-        className="relative h-64 sm:h-72 md:h-80"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="relative w-full h-full flex flex-col items-center justify-center p-4"
+        onClick={e => e.stopPropagation()}
       >
-        <ProgressiveImage
-          src={design.images?.[currentImageIndex]}
-          alt={`${design.tag} design by ${design.designer}`}
-          className="w-full h-full"
-          onClick={() => setIsModalOpen(true)}
-          priority={priority}
-        />
-        
-        {design.images?.length > 1 && (
-          <>
-            {/* Image counter */}
-            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-sm">
-              {currentImageIndex + 1} / {design.images.length}
-            </div>
+        {/* Close button */}
+        <button 
+          className="absolute top-4 right-4 text-white p-2 z-50 hover:bg-white/20 rounded-full"
+          onClick={handleClose}
+          aria-label="Close modal"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-            {/* Navigation dots */}
-            <div className="absolute inset-x-0 bottom-2 flex justify-center items-center space-x-2 z-10">
-              {design.images.map((_, index) => (
+        {/* Main content container */}
+        <div className="relative max-h-[85vh] w-full flex flex-col items-center">
+          {/* Image container */}
+          <div className="relative w-full flex-1 flex items-center justify-center mb-4">
+            <img
+              src={currentImage}
+              alt="Enlarged view"
+              className="max-h-[70vh] max-w-[90vw] object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+            
+            {/* Navigation buttons */}
+            {images.length > 1 && (
+              <>
                 <button
-                  key={index}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setCurrentImageIndex(index);
+                    onPrevious();
                   }}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                    index === currentImageIndex 
-                      ? 'bg-white scale-110' 
-                      : 'bg-white/50 hover:bg-white/75'
-                  }`}
-                  aria-label={`Go to image ${index + 1} of ${design.images.length}`}
-                />
+                  className="absolute left-4 w-10 h-10 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNext();
+                  }}
+                  className="absolute right-4 w-10 h-10 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
+            )}
+
+            {/* Image counter */}
+            <div className="absolute top-4 right-16 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              {currentIndex + 1} / {images.length}
+            </div>
+          </div>
+
+          {/* Design details */}
+          <div className="w-full max-w-3xl bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+            <div className="flex flex-wrap gap-3 items-center justify-center text-white">
+              {design.style && (
+                <span className="bg-blue-500/30 backdrop-blur-sm px-3 py-1 rounded-full text-sm">
+                  Style: {design.style}
+                </span>
+              )}
+              {design.tag && (
+                <span className="bg-green-500/30 backdrop-blur-sm px-3 py-1 rounded-full text-sm">
+                  Tag: {design.tag}
+                </span>
+              )}
+              {design.color?.map((c, index) => (
+                <span 
+                  key={index} 
+                  className="bg-gray-500/30 backdrop-blur-sm px-3 py-1 rounded-full text-sm"
+                >
+                  Color: {c}
+                </span>
               ))}
+              {design.description && (
+                <span className="bg-purple-500/30 backdrop-blur-sm px-3 py-1 rounded-full text-sm">
+                  Location: {design.description}
+                </span>
+              )}
             </div>
-
-            {/* Navigation buttons - hidden on mobile (use swipe instead) */}
-            <div className="hidden sm:flex absolute inset-0 items-center justify-between px-2">
-              <button
-                onClick={previousImage}
-                className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                aria-label="Previous image"
-              >
-                ←
-              </button>
-              <button
-                onClick={nextImage}
-                className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                aria-label="Next image"
-              >
-                →
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="p-4">
-        <p className="text-gray-700 text-sm md:text-base">{design.description}</p>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {design.style && (
-            <span className="text-xs md:text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-              Style: {design.style}
-            </span>
-          )}
-          {design.tag && (
-            <span className="text-xs md:text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
-              Tag: {design.tag}
-            </span>
-          )}
-          {design.color && design.color.map((c, index) => (
-            <span 
-              key={index} 
-              className="text-xs md:text-sm bg-gray-100 text-gray-800 px-2 py-1 rounded"
-            >
-              Color: {c}
-            </span>
-          ))}
+          </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const DesignCard = ({ design }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+
+  const handleCloseModal = useCallback(() => {
+    setShowModal(false);
+  }, []);
+
+  const handleImageClick = useCallback(() => {
+    setShowModal(true);
+  }, []);
+
+  const handleNextImage = useCallback((e) => {
+    e?.stopPropagation();
+    if (design?.images?.length) {
+      setCurrentImageIndex(prev => (prev + 1) % design.images.length);
+    }
+  }, [design?.images?.length]);
+
+  const handlePreviousImage = useCallback((e) => {
+    e?.stopPropagation();
+    if (design?.images?.length) {
+      setCurrentImageIndex(prev => 
+        prev === 0 ? design.images.length - 1 : prev - 1
+      );
+    }
+  }, [design?.images?.length]);
+
+  // Verify design data is valid
+  if (!design || !design.images || !Array.isArray(design.images) || design.images.length === 0) {
+    console.error('Invalid design data:', design);
+    return null;
+  }
+
+  return (
+    <div className="relative">
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div 
+          className="relative h-64 cursor-pointer"
+          onClick={handleImageClick}
+        >
+          <img
+            src={design.images[currentImageIndex]}
+            alt={`${design.tag || ''} design by ${design.designer || ''}`}
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Navigation controls */}
+          {design.images.length > 1 && (
+            <>
+              <div className="absolute inset-0 flex items-center justify-between p-2">
+                <button
+                  onClick={handlePreviousImage}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleNextImage}
+                  className="w-8 h-8 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Image counter */}
+              <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-sm">
+                {currentImageIndex + 1} / {design.images.length}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Card content */}
+        <div className="p-4">
+          <div className="flex flex-wrap gap-2">
+            {design.style && (
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                Style: {design.style}
+              </span>
+            )}
+            {design.tag && (
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                Tag: {design.tag}
+              </span>
+            )}
+            {design.color?.map((c, index) => (
+              <span 
+                key={index} 
+                className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm"
+              >
+                Color: {c}
+              </span>
+            ))}
+          </div>
+          {design.description && (
+            <p className="text-gray-700 mt-2">{design.description}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && design.images && (
+        <ImageModal
+          images={design.images}
+          currentIndex={currentImageIndex}
+          onClose={handleCloseModal}
+          onNext={handleNextImage}
+          onPrevious={handlePreviousImage}
+          design={design}
+        />
+      )}
     </div>
   );
 };
@@ -280,15 +369,17 @@ const DesignList = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const apiUrl = 'https://pencildogs.com';
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
         const response = await fetch(`${apiUrl}/api/design`);
         
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const data = await response.json();
+        console.log('Fetched designs:', data);
+        
         if (data?.designs) {
           setDesigns(data.designs);
         } else {
@@ -305,14 +396,17 @@ const DesignList = () => {
     fetchDesigns();
   }, []);
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
-  if (!designs.length) return <EmptyState />;
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!designs.length) return <div>No designs found</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h2 className="text-3xl font-bold text-center mb-12">Featured Designs</h2>
-      <VirtualizedDesignList designs={designs} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {designs.map((design) => (
+          <DesignCard key={design.id} design={design} />
+        ))}
+      </div>
     </div>
   );
 };
