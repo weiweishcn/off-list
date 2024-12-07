@@ -158,7 +158,7 @@ const DesignCard = ({ design, priority = false }) => {
   };
 
   return (
-     <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
       <div className="relative h-64">
         <ProgressiveImage
           src={design.images?.[currentImageIndex]}
@@ -170,20 +170,41 @@ const DesignCard = ({ design, priority = false }) => {
         
         {/* Navigation buttons */}
         {design.images?.length > 1 && (
-          <div className="absolute inset-0 flex items-center justify-between px-2">
-            <button
-              onClick={previousImage}
-              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-            >
-              ←
-            </button>
-            <button
-              onClick={nextImage}
-              className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-            >
-              →
-            </button>
-          </div>
+          <>
+            <div className="absolute inset-x-0 bottom-2 flex justify-center items-center space-x-2 z-10">
+              {design.images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentImageIndex(index);
+                  }}
+                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                    index === currentImageIndex 
+                      ? 'bg-white scale-110' 
+                      : 'bg-white/50 hover:bg-white/75'
+                  }`}
+                  aria-label={`Go to image ${index + 1} of ${design.images.length}`}
+                />
+              ))}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-between px-2">
+              <button
+                onClick={previousImage}
+                className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                aria-label="Previous image"
+              >
+                ←
+              </button>
+              <button
+                onClick={nextImage}
+                className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                aria-label="Next image"
+              >
+                →
+              </button>
+            </div>
+          </>
         )}
       </div>
 

@@ -26,6 +26,14 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://165.232.131.137:3000', 'https://pencildogs.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+
 // Configure compression with debug logging
 const customCompression = (req, res, next) => {
   const _send = res.send;
