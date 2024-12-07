@@ -131,6 +131,34 @@ const VirtualizedDesignList = ({ designs }) => {
 const DesignCard = ({ design, priority = false }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+
+  // Handle touch events for swiping
+  const handleTouchStart = (e) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStart) return;
+
+    const touchEnd = e.touches[0].clientX;
+    const diff = touchStart - touchEnd;
+
+    if (Math.abs(diff) > 50) { // Minimum swipe distance
+      if (diff > 0) {
+        // Swipe left - next image
+        nextImage();
+      } else {
+        // Swipe right - previous image
+        previousImage();
+      }
+      setTouchStart(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+  };
 
   // Preload next images
   useEffect(() => {
@@ -159,7 +187,12 @@ const DesignCard = ({ design, priority = false }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
-      <div className="relative h-64">
+      <div 
+        className="relative h-64 sm:h-72 md:h-80"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <ProgressiveImage
           src={design.images?.[currentImageIndex]}
           alt={`${design.tag} design by ${design.designer}`}
@@ -168,9 +201,14 @@ const DesignCard = ({ design, priority = false }) => {
           priority={priority}
         />
         
-        {/* Navigation buttons */}
         {design.images?.length > 1 && (
           <>
+            {/* Image counter */}
+            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-sm">
+              {currentImageIndex + 1} / {design.images.length}
+            </div>
+
+            {/* Navigation dots */}
             <div className="absolute inset-x-0 bottom-2 flex justify-center items-center space-x-2 z-10">
               {design.images.map((_, index) => (
                 <button
@@ -188,7 +226,9 @@ const DesignCard = ({ design, priority = false }) => {
                 />
               ))}
             </div>
-            <div className="absolute inset-0 flex items-center justify-between px-2">
+
+            {/* Navigation buttons - hidden on mobile (use swipe instead) */}
+            <div className="hidden sm:flex absolute inset-0 items-center justify-between px-2">
               <button
                 onClick={previousImage}
                 className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
@@ -209,22 +249,22 @@ const DesignCard = ({ design, priority = false }) => {
       </div>
 
       <div className="p-4">
-        <p className="text-gray-700 mt-2">{design.description}</p>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-gray-700 text-sm md:text-base">{design.description}</p>
+        <div className="flex flex-wrap gap-2 mt-2">
           {design.style && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+            <span className="text-xs md:text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
               Style: {design.style}
             </span>
           )}
           {design.tag && (
-            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+            <span className="text-xs md:text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
               Tag: {design.tag}
             </span>
           )}
           {design.color && design.color.map((c, index) => (
             <span 
               key={index} 
-              className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm"
+              className="text-xs md:text-sm bg-gray-100 text-gray-800 px-2 py-1 rounded"
             >
               Color: {c}
             </span>
@@ -243,7 +283,7 @@ const DesignList = () => {
   useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const apiUrl = process.env.REACT_APP_API_URL || 'https://pencildogs.com';
+        const apiUrl = 'https://pencildogs.com';
         const response = await fetch(`${apiUrl}/api/design`);
         
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
