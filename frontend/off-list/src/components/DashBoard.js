@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StripeSubscription from './StripeSubscription';
 
 function Dashboard() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
   const [designRequests, setDesignRequests] = useState([]);
+  const [subscription, setSubscription] = useState(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   useEffect(() => {
     // Check for auth token
@@ -20,6 +23,42 @@ function Dashboard() {
     if (storedUsername) {
       setUsername(storedUsername);
     }
+
+        // Fetch subscription status
+    const checkSubscription = async () => {
+      try {
+        const response = await fetch('/api/subscription-status', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        setSubscription(data.subscription);
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
+    };
+
+    checkSubscription();
+
+  const handleSubscriptionComplete = async (data) => {
+    setShowSubscriptionModal(false);
+    // Refresh subscription status
+    const response = await fetch('/api/subscription-status', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    const newData = await response.json();
+    setSubscription(newData.subscription);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    navigate('/');
+  };
+
 
     // Fetch design requests - currently using dummy data
     // In production, this would be an API call with the token
@@ -47,6 +86,18 @@ function Dashboard() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     navigate('/');
+  };
+
+    const handleSubscriptionComplete = async (data) => {
+    setShowSubscriptionModal(false);
+    // Refresh subscription status
+    const response = await fetch('/api/subscription-status', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    const newData = await response.json();
+    setSubscription(newData.subscription);
   };
 
   if (loading) {
@@ -78,6 +129,29 @@ function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Subscription Status */}
+        <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Subscription Status</h2>
+              <p className="text-gray-600">
+                {subscription ? (
+                  `Active subscription: ${subscription.plan}`
+                ) : (
+                  'No active subscription'
+                )}
+              </p>
+            </div>
+            {!subscription && (
+              <button
+                onClick={() => setShowSubscriptionModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Subscribe Now
+              </button>
+            )}
+          </div>
+        </div>
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <div 
@@ -158,6 +232,23 @@ function Dashboard() {
             </table>
           </div>
         </div>
+                {/* Subscription Modal */}
+        {showSubscriptionModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Choose Your Plan</h2>
+                <button
+                  onClick={() => setShowSubscriptionModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              </div>
+              <StripeSubscription onSubscriptionComplete={handleSubscriptionComplete} />
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
