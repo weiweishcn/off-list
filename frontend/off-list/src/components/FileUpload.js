@@ -66,9 +66,18 @@ const onSubmit = async e => {
   setUploadProgress(0);
 
   const formData = new FormData();
-  files.forEach(file => {
+  
+  // Append each file along with its content type
+  files.forEach((file, index) => {
     formData.append("uploadFiles", file);
+    // Append content type as a separate field
+    formData.append("contentTypes", file.type);
+    // Append original filename
+    formData.append("fileNames", file.name);
   });
+
+  // Add upload type to help backend processing
+  formData.append("uploadType", uploadType);
 
   try {
     const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
@@ -77,7 +86,9 @@ const onSubmit = async e => {
       : `${apiUrl}/api/upload/`;
 
     const response = await axios.post(endpoint, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 
+        'Content-Type': 'multipart/form-data'
+      },
       onUploadProgress: (progressEvent) => {
         const percentCompleted = Math.round(
           (progressEvent.loaded * 100) / progressEvent.total
@@ -87,10 +98,26 @@ const onSubmit = async e => {
     });
 
     const urls = response.data.imageUrls;
+    
+    // Validate the content type of uploaded files
+    try {
+      for (const url of urls) {
+        const validation = await fetch(url, { method: 'HEAD' });
+        const contentType = validation.headers.get('content-type');
+        console.log(`Validated uploaded file content-type: ${contentType}`);
+        
+        if (!contentType.startsWith('image/') && !contentType.startsWith('application/pdf')) {
+          console.warn(`Warning: Unexpected content-type ${contentType} for ${url}`);
+        }
+      }
+    } catch (validationError) {
+      console.warn('Content-type validation warning:', validationError);
+    }
+
     setUploadedUrls(urls);
 
     if (onUploadComplete) {
-      onUploadComplete(urls);  // Pass URLs instead of files
+      onUploadComplete(urls);
     }
 
     setUploadStatus({
