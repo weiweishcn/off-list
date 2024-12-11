@@ -139,7 +139,7 @@ const listS3FolderContents = async (folderPrefix) => {
     Prefix: folderPrefix
   };
 
-  try {
+  try { 
     const data = await s3.listObjects(params).promise();
     // Sort the contents to ensure consistent order
     const sortedContents = data.Contents
@@ -276,13 +276,23 @@ app.post('/api/login', async (req, res) => {
   
   try {
     console.log('Executing query...');
-    const result = await pool.query('SELECT password_hash FROM users WHERE email = $1', [username]);
+    const result = await pool.query(
+      'SELECT password_hash, user_type FROM users WHERE email = $1', 
+      [username]
+    );
     console.log('Query result:', result.rows);
     
     if (result.rows.length > 0 && result.rows[0].password_hash === password) {
-      const token = jwt.sign({ username }, 'secret-key');
+      const token = jwt.sign({ 
+        username,
+        userType: result.rows[0].user_type 
+      }, 'secret-key');
+      
       console.log('Login successful, sending token');
-      res.status(200).json({ token });
+      res.status(200).json({ 
+        token,
+        userType: result.rows[0].user_type
+      });
     } else {
       console.log('Invalid credentials - no match found');
       res.status(401).json({ error: 'Invalid credentials' });
@@ -390,6 +400,233 @@ app.post('/api/upload-floor-plan', (req, res) => {
       res.status(400).send({ error: { msg: 'No files uploaded' } });
     }
   });
+});
+
+//TODO
+//const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+app.post('/api/create-subscription', async (req, res) => {
+  const { paymentMethodId, planId } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    const user = decoded.username;
+    
+    // Create or get customer
+    const customer = await stripe.customers.create({
+      payment_method: paymentMethodId,
+      email: user,
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+
+    // Create subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: planId }],
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    // Store subscription info in your database
+    await pool.query(
+      'UPDATE users SET stripe_subscription_id = $1, stripe_customer_id = $2 WHERE email = $3',
+      [subscription.id, customer.id, user]
+    );
+
+    res.json({ subscription });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/api/subscription-status', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    // Get subscription from database
+    const result = await pool.query(
+      'SELECT stripe_subscription_id FROM users WHERE email = $1',
+      [decoded.username]
+    );
+
+    if (result.rows[0]?.stripe_subscription_id) {
+      const subscription = await stripe.subscriptions.retrieve(
+        result.rows[0].stripe_subscription_id
+      );
+      res.json({ subscription });
+    } else {
+      res.json({ subscription: null });
+    }
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get projects assigned to the current designer
+app.get('/api/designer-projects', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    const email = decoded.username;
+
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        u.email as client_email
+      FROM projects p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.designer_id = (SELECT id FROM users WHERE email = $1)
+      ORDER BY p.last_modified_at DESC
+    `, [email]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching designer projects:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all projects for admin
+app.get('/api/admin/projects', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    // Verify admin status
+    if (decoded.userType !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        u1.email as client_email,
+        u2.email as designer_email
+      FROM projects p
+      LEFT JOIN users u1 ON p.user_id = u1.id
+      LEFT JOIN users u2 ON p.designer_id = u2.id
+      ORDER BY p.created_at DESC
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching admin projects:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all designers
+app.get('/api/admin/designers', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    if (decoded.userType !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      SELECT id, email 
+      FROM users 
+      WHERE user_type = 'designer'
+      ORDER BY email ASC
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching designers:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Assign designer to project
+app.post('/api/admin/projects/:projectId/assign', async (req, res) => {
+  const { projectId } = req.params;
+  const { designerId } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    if (decoded.userType !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      UPDATE projects 
+      SET designer_id = $1, 
+          last_modified_at = CURRENT_TIMESTAMP 
+      WHERE id = $2 
+      RETURNING *
+    `, [designerId, projectId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error assigning designer:', error);
+    res.status(500).json({ error: error.message });
+  }
+});// Get all designers
+app.get('/api/admin/designers', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    if (decoded.userType !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      SELECT id, email 
+      FROM users 
+      WHERE user_type = 'designer'
+      ORDER BY email ASC
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching designers:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Assign designer to project
+app.post('/api/admin/projects/:projectId/assign', async (req, res) => {
+  const { projectId } = req.params;
+  const { designerId } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    if (decoded.userType !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      UPDATE projects 
+      SET designer_id = $1, 
+          last_modified_at = CURRENT_TIMESTAMP 
+      WHERE id = $2 
+      RETURNING *
+    `, [designerId, projectId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error assigning designer:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Serve static files for React app

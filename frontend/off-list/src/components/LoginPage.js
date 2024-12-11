@@ -13,32 +13,46 @@ const LoginPage = () => {
 
   // Add this line to debug
   console.log('API URL:', process.env.REACT_APP_API_URL);
-   try {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
-     const response = await fetch(`${apiUrl}/api/login`, {
-       method: 'POST',
-       headers: {
-         'Content-Type': 'application/json',
-       },
-       credentials: 'include',
-       body: JSON.stringify({
-         username,
-         password
-       })
-     });
+     try {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const response = await fetch(`${apiUrl}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          username,
+          password
+        })
+      });
 
-     if (!response.ok) {
-       throw new Error('Login failed');
-     }
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
 
-     const data = await response.json();
-     localStorage.setItem('token', data.token);
-     navigate('/dashboard');
-   } catch (error) {
-     console.error('Login error:', error);
-     setError('An error occurred during login. Please try again.');
-   }
- };
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('username', username);
+      localStorage.setItem('userType', data.userType);
+
+      // Navigate based on user type
+      switch (data.userType) {
+        case 'designer':
+          navigate('/designer-dashboard');
+          break;
+        case 'admin':
+          navigate('/admin-dashboard');
+          break;
+        default:
+          navigate('/dashboard');
+          break;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login. Please try again.');
+    }
+  };
 
  return (
    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
