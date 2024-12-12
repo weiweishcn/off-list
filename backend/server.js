@@ -18,7 +18,9 @@ const zlib = require('zlib');
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(express.json());
+// Add this after your app initialization
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 app.use((req, res, next) => {
   console.log('Incoming request:', {
