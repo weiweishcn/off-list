@@ -300,7 +300,7 @@ const taggedFloorPlanUpload = multer({
     }
   }),
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit for tagged floor plans
+    fileSize: 100 * 1024 * 1024 // 100MB limit for tagged floor plans
   }
 }).array('uploadFiles', 1);
 
@@ -308,6 +308,11 @@ app.post('/api/upload-tagged-floor-plan', (req, res) => {
   taggedFloorPlanUpload(req, res, function(err) {
     if (err) {
       console.error('Upload error:', err);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          error: { msg: 'File too large. Maximum size is 100MB' }
+        });
+      }
       return res.status(500).json({
         error: { msg: `Upload error: ${err.message}` }
       });
