@@ -82,6 +82,7 @@ const CreateDesign = () => {
   const form = useRef();
   const [roomDetails, setRoomDetails] = useState({});
   const navigate = useNavigate();
+  const [showError, setShowError] = useState({ show: false, message: '' });
   const [currentStep, setCurrentStep] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -173,7 +174,20 @@ const questions = [
 
   {/* Add to CreateDesign.js */}
 
-const PreviewMode = ({ formData, rooms, floorPlanUrl, roomTags, onBack, onConfirm }) => {
+const PreviewMode = ({ 
+  rooms, 
+  roomDetails,
+  floorPlanUrls, 
+  roomTags, 
+  hasExistingFloorPlan,
+  onBack,
+  onConfirm,
+  navigate,
+  setShowSuccess,
+  setShowError,
+  setShowConfirm,
+  setShowHomeConfirm
+}) => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold mb-6">Review Your Design Request</h2>
@@ -192,16 +206,60 @@ const PreviewMode = ({ formData, rooms, floorPlanUrl, roomTags, onBack, onConfir
                   )}
                   {room.height && <div>Height: {room.height}'</div>}
                 </div>
+                {roomDetails[room.id] && (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <p><strong>Style:</strong> {roomDetails[room.id].style}</p>
+                      <p><strong>Description:</strong> {roomDetails[room.id].description}</p>
+                    </div>
+
+                    {/* Existing Room Photos */}
+                    {roomDetails[room.id].existingPhotos?.length > 0 && (
+                      <div>
+                        <h5 className="font-medium mb-2">Current Room Photos</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          {roomDetails[room.id].existingPhotos.map((url, index) => (
+                            <div key={index} className="relative">
+                              <img
+                                src={url}
+                                alt={`Current ${room.type} ${index + 1}`}
+                                className="w-full h-40 object-cover rounded-md"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Inspiration Photos */}
+                    {roomDetails[room.id].inspirationPhotos?.length > 0 && (
+                      <div>
+                        <h5 className="font-medium mb-2">Inspiration Photos</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          {roomDetails[room.id].inspirationPhotos.map((url, index) => (
+                            <div key={index} className="relative">
+                              <img
+                                src={url}
+                                alt={`Inspiration ${index + 1}`}
+                                className="w-full h-40 object-cover rounded-md"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {floorPlanUrl && (
+        {floorPlanUrls[0] && (
           <div>
             <h3 className="text-lg font-semibold mb-4">Floor Plan with Tagged Rooms</h3>
             <RoomTagger
-              floorPlanUrl={floorPlanUrl}
+              floorPlanUrl={floorPlanUrls[0]}
               rooms={rooms}
               onTagsUpdate={() => {}}
               isPreviewMode={true}
@@ -218,7 +276,7 @@ const PreviewMode = ({ formData, rooms, floorPlanUrl, roomTags, onBack, onConfir
             Back to Edit
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => onConfirm()}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Confirm & Submit
@@ -229,55 +287,104 @@ const PreviewMode = ({ formData, rooms, floorPlanUrl, roomTags, onBack, onConfir
   );
 };
 
-// Update the render logic:
+const handleSubmit = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setShowError({ 
+        show: true, 
+        message: 'Please log in to submit your design request.' 
+      });
+      return;
+    }
+
+    const apiUrl = process.env.REACT_APP_API_URL;
+    
+    // Validate all required data - removed photo requirement
+    const isValid = rooms.every(room => {
+      const details = roomDetails[room.id];
+      return room.type && 
+             room.squareFootage && 
+             details?.style && 
+             details?.description;
+    });
+
+    if (!isValid) {
+      setShowError({
+        show: true,
+        message: 'Please complete all required fields for each room.'
+      });
+      return;
+    }
+
+    // Format the data for submission
+    const formattedRooms = rooms.map(room => ({
+      type: room.type,
+      dimensions: {
+        squareFootage: room.squareFootage,
+        length: room.length || null,
+        width: room.width || null,
+        height: room.height || null
+      },
+      designPreferences: roomDetails[room.id] || {},
+    }));
+
+    // Create project
+    const response = await axios.post(
+      `${apiUrl}/api/projects`, 
+      {
+        rooms: formattedRooms,
+        hasFloorPlan: hasExistingFloorPlan,
+        originalFloorPlanUrl: floorPlanUrls[0], // Original uploaded floor plan
+        taggedFloorPlanUrl: floorPlanUrls[1]  // Tagged version, if exists
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.status === 200) {
+      setShowSuccess(true);
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Error submitting design:', error);
+    setShowError({
+      show: true,
+      message: error.response?.data?.error || 'Failed to submit design. Please try again.'
+    });
+  }
+};
+
+// Update the preview mode render logic
 if (showPreview) {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <PreviewMode
-          formData={formData}
           rooms={rooms}
-          floorPlanUrl={floorPlanUrls[0]}
+          roomDetails={roomDetails}
+          floorPlanUrls={floorPlanUrls}
           roomTags={roomTags}
+          hasExistingFloorPlan={hasExistingFloorPlan}
           onBack={() => setShowPreview(false)}
-          onConfirm={() => {
-            setShowConfirm(true);
-          }}
+          onConfirm={handleSubmit} // Add this line
+          navigate={navigate}
+          setShowSuccess={setShowSuccess}
+          setShowError={setShowError}
+          setShowConfirm={setShowConfirm}
+          setShowHomeConfirm={setShowHomeConfirm}
         />
       </div>
     </div>
   );
 }
-
-const handleSubmit = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const apiUrl = process.env.REACT_APP_API_URL;
-    
-    // Create project and get project ID
-    const projectResponse = await axios.post(`${apiUrl}/api/projects`, {
-      rooms: rooms.map(room => ({
-        ...room,
-        details: roomDetails[room.id]
-      })),
-      hasFloorPlan: hasExistingFloorPlan,
-      floorPlanUrls: floorPlanUrls,
-      roomTags: roomTags
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    setShowSuccess(true);
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000);
-  } catch (error) {
-    console.error('Error creating project:', error);
-    alert('Failed to create project. Please try again.');
-  }
-};
 
   const renderCurrentStep = () => {
     const currentQuestion = questions[currentStep];
@@ -472,8 +579,8 @@ const isCurrentStepValid = () => {
     case 'roomDetails':
       return rooms.every(room => {
         const details = roomDetails[room.id];
+        // Remove existingPhotos validation check
         return details?.style && 
-               details?.existingPhotos?.length > 0 &&
                details?.description?.trim().length > 0;
       });
     default:
@@ -516,7 +623,7 @@ const isCurrentStepValid = () => {
             type="button"
             onClick={() => {
               if (currentStep === questions.length - 1) {
-                setShowConfirm(true);
+                setShowPreview(true);
               } else {
                 setCurrentStep(prev => prev + 1);
               }

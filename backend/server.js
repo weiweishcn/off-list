@@ -701,6 +701,248 @@ app.post('/api/admin/projects/:projectId/assign', async (req, res) => {
   }
 });
 
+app.post('/api/projects', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No authorization token provided' });
+  }
+
+  let client;
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [decoded.username]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = userResult.rows[0].id;
+    const { rooms, hasFloorPlan, originalFloorPlanUrl, taggedFloorPlanUrl } = req.body;
+
+    // Start transaction
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // 1. Create project record
+    const projectResult = await client.query(
+      `INSERT INTO projects 
+       (user_id, status, has_floor_plan, completed, created_at, last_modified_at, name) 
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5) 
+       RETURNING id`,
+      [userId, 'pending', hasFloorPlan, false, `Project ${new Date().toLocaleDateString()}`]
+    );
+
+    const projectId = projectResult.rows[0].id;
+    const projectFolder = `projects/project-${projectId}`;
+
+    // Function to copy file to project folder
+const copyFileToProjectFolder = async (sourceUrl) => {
+  if (!sourceUrl) return null;
+
+  try {
+    // Extract the key from the full URL
+    const urlParts = sourceUrl.split('digitaloceanspaces.com/');
+    const sourceKey = urlParts[1]; // This gets everything after digitaloceanspaces.com/
+
+    // Create new key in projects folder
+    const filename = sourceKey.split('/').pop(); // Get just the filename
+    const newKey = `projects/project-${projectId}/${filename}`;
+
+    console.log('Copying file:', {
+      sourceKey,
+      newKey,
+      sourceUrl
+    });
+
+    await s3.copyObject({
+      Bucket: 'designimages',
+      CopySource: `designimages/${sourceKey}`,
+      Key: newKey,
+      ACL: 'public-read'
+    }).promise();
+
+    // Delete original file after successful copy
+    await s3.deleteObject({
+      Bucket: 'designimages',
+      Key: sourceKey
+    }).promise();
+
+    return `https://designimages.sfo3.digitaloceanspaces.com/${newKey}`;
+  } catch (error) {
+    console.error('Error copying file:', error, { sourceUrl });
+    throw error;
+  }
+};
+
+    // 2. Move and store floor plan data
+    let updatedOriginalFloorPlanUrl = null;
+    let updatedTaggedFloorPlanUrl = null;
+
+    if (hasFloorPlan && originalFloorPlanUrl) {
+      updatedOriginalFloorPlanUrl = await copyFileToProjectFolder(originalFloorPlanUrl);
+      if (taggedFloorPlanUrl) {
+        updatedTaggedFloorPlanUrl = await copyFileToProjectFolder(taggedFloorPlanUrl);
+      }
+
+      await client.query(
+        `INSERT INTO project_floor_plans 
+         (project_id, floor_plan_url, tagged_floor_plan_url) 
+         VALUES ($1, $2, $3)`,
+        [projectId, updatedOriginalFloorPlanUrl, updatedTaggedFloorPlanUrl]
+      );
+    }
+
+    // 3. Store rooms data
+    for (const room of rooms) {
+      const roomResult = await client.query(
+        `INSERT INTO project_rooms 
+         (project_id, room_type, square_footage, length, width, height) 
+         VALUES ($1, $2, $3, $4, $5, $6) 
+         RETURNING id`,
+        [
+          projectId,
+          room.type,
+          room.dimensions.squareFootage,
+          room.dimensions.length,
+          room.dimensions.width,
+          room.dimensions.height
+        ]
+      );
+
+      const roomId = roomResult.rows[0].id;
+
+      // Store room design preferences
+      await client.query(
+        `INSERT INTO room_design_preferences 
+         (room_id, style, description) 
+         VALUES ($1, $2, $3)`,
+        [
+          roomId,
+          room.designPreferences.style,
+          room.designPreferences.description
+        ]
+      );
+
+      // Move and store inspiration photos
+      if (room.designPreferences.inspirationPhotos?.length > 0) {
+        const updatedInspirationUrls = await Promise.all(
+          room.designPreferences.inspirationPhotos.map(url => copyFileToProjectFolder(url))
+        );
+
+        const inspirationPhotoValues = updatedInspirationUrls
+          .filter(url => url) // Remove any null values
+          .map(url => `(${roomId}, '${url}', 'inspiration')`)
+          .join(', ');
+
+        if (inspirationPhotoValues) {
+          await client.query(`
+            INSERT INTO room_photos 
+            (room_id, photo_url, photo_type)
+            VALUES ${inspirationPhotoValues}
+          `);
+        }
+      }
+
+      // Move and store existing room photos
+      if (room.designPreferences.existingPhotos?.length > 0) {
+        const updatedExistingUrls = await Promise.all(
+          room.designPreferences.existingPhotos.map(url => copyFileToProjectFolder(url))
+        );
+
+        const existingPhotoValues = updatedExistingUrls
+          .filter(url => url) // Remove any null values
+          .map(url => `(${roomId}, '${url}', 'existing')`)
+          .join(', ');
+
+        if (existingPhotoValues) {
+          await client.query(`
+            INSERT INTO room_photos 
+            (room_id, photo_url, photo_type)
+            VALUES ${existingPhotoValues}
+          `);
+        }
+      }
+    }
+
+    // Commit transaction
+    await client.query('COMMIT');
+
+    // Send success response
+    res.status(200).json({
+      success: true,
+      projectId,
+      message: 'Project created successfully'
+    });
+
+  } catch (error) {
+    // Rollback in case of error
+    if (client) {
+      await client.query('ROLLBACK');
+    }
+    
+    console.error('Error creating project:', error);
+    res.status(500).json({
+      error: 'Failed to create project',
+      details: error.message
+    });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
+
+// Get user's projects
+app.get('/api/projects', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    const result = await pool.query(`
+      SELECT 
+        p.id,
+        p.status,
+        p.created_at,
+        p.last_modified_at,
+        p.has_floor_plan,
+        pf.floor_plan_url,
+        json_agg(DISTINCT jsonb_build_object(
+          'id', pr.id,
+          'type', pr.room_type,
+          'squareFootage', pr.square_footage,
+          'dimensions', jsonb_build_object(
+            'length', pr.length,
+            'width', pr.width,
+            'height', pr.height
+          )
+        )) as rooms,
+        json_agg(DISTINCT jsonb_build_object(
+          'roomName', rt.room_name,
+          'x', rt.x_coordinate,
+          'y', rt.y_coordinate
+        )) FILTER (WHERE rt.id IS NOT NULL) as room_tags
+      FROM projects p
+      LEFT JOIN project_floor_plans pf ON p.id = pf.project_id
+      LEFT JOIN project_rooms pr ON p.id = pr.project_id
+      LEFT JOIN room_tags rt ON p.id = rt.project_id
+      WHERE p.user_id = (SELECT id FROM users WHERE email = $1)
+      GROUP BY p.id, pf.floor_plan_url
+      ORDER BY p.created_at DESC
+    `, [decoded.username]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve static files for React app
 app.use(express.static(path.join(__dirname, '../frontend/off-list/build')));
 

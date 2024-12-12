@@ -128,9 +128,6 @@ const RoomDetailsForm = ({ room, onUpdate, showValidation }) => {
             accept="image/jpeg,image/png,image/jpg"
             uploadType="existing"
           />
-          {showValidation && roomDetails.existingPhotos.length === 0 && (
-            <p className="mt-1 text-sm text-red-500">Please upload at least one photo of your current room</p>
-          )}
           {roomDetails.existingPhotos.length > 0 && (
             <div className="mt-2 grid grid-cols-2 gap-2">
               {roomDetails.existingPhotos.map((url, index) => (
