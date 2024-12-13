@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tab } from '@headlessui/react';
 import FloorPlanComments from './FloorPlanComments';
+import FinalDesignsSection from './FinalDesignsSection';
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -230,26 +231,11 @@ const ProjectDetails = () => {
         </div>
 
         {/* Final Designs Section */}
-        {project.final_designs && project.final_designs.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <h2 className="text-xl font-semibold mb-4">Designer's Final Designs</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {project.final_designs.map((design, index) => (
-                <img
-                  key={index}
-                  src={design.design_url}
-                  alt={`Final Design ${index + 1}`}
-                  className="rounded-lg object-cover h-48 w-full cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(design.design_url, '_blank')}
-                  onError={(e) => {
-                    console.error('Image failed to load:', e.target.src);
-                    e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+            <FinalDesignsSection
+            projectId={project.id}
+            designs={project.final_designs}
+            isDesigner={false}
+            />
       </div>
     </div>
   );

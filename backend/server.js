@@ -913,6 +913,7 @@ app.get('/api/projects/:id', async (req, res) => {
     const decoded = jwt.verify(token, 'secret-key');
     
     // First, check if the user has access to this project
+    if (decoded.userType !== 'admin') {
     const accessCheck = await pool.query(`
       SELECT p.id 
       FROM projects p
@@ -928,6 +929,7 @@ app.get('/api/projects/:id', async (req, res) => {
 
     if (accessCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Project not found' });
+      }
     }
 
     // Get project details including rooms and floor plans

@@ -5,6 +5,7 @@ const ProjectsTable = ({ projects, title, sortConfig, onSort, designers, onAssig
   const [selectedProject, setSelectedProject] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedDesigner, setSelectedDesigner] = useState('');
+  const navigate = useNavigate();
 
   const getNextSortDirection = (field) => {
     if (sortConfig.field !== field) return 'asc';
@@ -85,12 +86,12 @@ const ProjectsTable = ({ projects, title, sortConfig, onSort, designers, onAssig
                       Assign Designer
                     </button>
                   )}
-                  <button
-                    onClick={() => window.location.href = `/admin/projects/${project.id}`}
-                    className="text-indigo-600 hover:text-indigo-900"
-                  >
-                    View Details
-                  </button>
+                        <button
+                        onClick={() => navigate(`/designer/projects/${project.id}`)}
+                        className="text-blue-600 hover:text-blue-900"
+                        >
+                        View Details
+                        </button>
                   {project.floor_plan_url && (
                     <button
                       onClick={() => window.open(project.floor_plan_url, '_blank')}

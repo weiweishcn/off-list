@@ -139,7 +139,6 @@ const DesignerDashboard = () => {
                       {new Date(project.last_modified_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        // In the Actions column of the projects table
                         <button
                         onClick={() => navigate(`/designer/projects/${project.id}`)}
                         className="text-blue-600 hover:text-blue-900"
