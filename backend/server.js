@@ -972,6 +972,7 @@ app.get('/api/projects/:id', async (req, res) => {
         (
           SELECT json_agg(
             jsonb_build_object(
+              'id', pfd.id,
               'design_url', pfd.design_url
             )
           )
@@ -1069,15 +1070,18 @@ app.post('/api/projects/:projectId/designs/:designId/comments', async (req, res)
 });
 
 // Get user's projects
+// Get projects based on user role
 app.get('/api/projects', async (req, res) => {
-  console.log("requesting for project.....");
+  console.log("Requesting all projects...");
   const token = req.headers.authorization?.split(' ')[1];
   
   try {
     const decoded = jwt.verify(token, 'secret-key');
-    
-    // Update the project details query to include design IDs
-    const result = await pool.query(`
+    const userType = decoded.userType; // Get user type from token
+    console.log('User type:', userType);
+
+    // Base query that's common for both roles
+    const baseQuery = `
       SELECT 
         p.*,
         pf.floor_plan_url,
@@ -1130,11 +1134,31 @@ app.get('/api/projects', async (req, res) => {
       LEFT JOIN project_floor_plans pf ON p.id = pf.project_id
       LEFT JOIN project_rooms pr ON p.id = pr.project_id
       LEFT JOIN users u ON p.user_id = u.id
-      WHERE p.id = $1
-      GROUP BY p.id, pf.floor_plan_url, pf.tagged_floor_plan_url, u.email
-    `, [id]);
+    `;
 
-    res.json(result.rows);
+    // Different WHERE clauses based on user type
+    const whereClause = userType === 'designer' 
+      ? `WHERE p.designer_id = (SELECT id FROM users WHERE email = $1)`
+      : `WHERE p.user_id = (SELECT id FROM users WHERE email = $1)`;
+
+    const fullQuery = `
+      ${baseQuery}
+      ${whereClause}
+      GROUP BY p.id, pf.floor_plan_url, pf.tagged_floor_plan_url, u.email
+      ORDER BY p.created_at DESC
+    `;
+
+    const result = await pool.query(fullQuery, [decoded.username]);
+    console.log("fetching project details")
+    console.log(result)
+    // Clean up null arrays in the response
+    const projects = result.rows.map(project => ({
+      ...project,
+      rooms: project.rooms[0] === null ? [] : project.rooms,
+      final_designs: project.final_designs === null ? [] : project.final_designs
+    }));
+
+    res.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
     res.status(500).json({ error: error.message });

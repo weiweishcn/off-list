@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Tab } from '@headlessui/react';
 import FloorPlanComments from './FloorPlanComments';
 import DesignComments from './DesignComments';
+import FinalDesignsSection from './FinalDesignsSection';
 
 const DesignerProjectDetails = () => {
   const { id } = useParams();
@@ -317,69 +318,13 @@ const DesignerProjectDetails = () => {
         </div>
 
         {/* Final Designs Section */}
-        {project.final_designs && project.final_designs.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <h2 className="text-xl font-semibold mb-4">Final Designs</h2>
-            
-            <Tab.Group>
-            <Tab.List className="flex space-x-4 overflow-x-auto pb-2 mb-6 border-b">
-                {project.final_designs.map((design, index) => (
-                <Tab
-                    key={design.id || index}
-                    className={({ selected }) =>
-                    `px-4 py-2 font-medium focus:outline-none shrink-0 ${
-                        selected
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`
-                    }
-                >
-                    Design {index + 1}
-                </Tab>
-                ))}
-            </Tab.List>
-
-            <Tab.Panels>
-                {project.final_designs.map((design, index) => (
-                <Tab.Panel key={design.id || index}>
-                    {design.id ? (
-                    <DesignComments
-                        projectId={project.id}
-                        designId={design.id}
-                        imageUrl={design.design_url}
-                    />
-                    ) : (
-                    <div className="text-red-600">Error: Design ID not available</div>
-                    )}
-                </Tab.Panel>
-                ))}
-            </Tab.Panels>
-            </Tab.Group>
-
-            {/* Upload section for DesignerProjectDetails only */}
-            {handleFinalDesignsUpload && (
-            <div className="mt-8 pt-6 border-t">
-                <label className="block text-sm font-medium text-gray-700">
-                Upload New Designs
-                </label>
-                <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFinalDesignsUpload}
-                disabled={uploadingDesigns}
-                className="mt-1 block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100"
-                />
-                {uploadingDesigns && <p className="mt-2 text-sm text-gray-500">Uploading...</p>}
-            </div>
-            )}
-        </div>
-        )}
+            <FinalDesignsSection
+            projectId={project.id}
+            designs={project.final_designs}
+            isDesigner={true}
+            onUploadDesigns={handleFinalDesignsUpload}
+            uploadingDesigns={uploadingDesigns}
+            />
       </div>
     </div>
   );

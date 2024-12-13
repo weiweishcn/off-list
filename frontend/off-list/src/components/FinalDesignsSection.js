@@ -28,7 +28,7 @@ const FinalDesignsSection = ({
   }, [selectedDesignIndex, validDesigns]);
 
   const loadComments = async (designId) => {
-    setIsLoadingComments(true);
+    //setIsLoadingComments(true);
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
