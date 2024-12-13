@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import StripeSubscription from './StripeSubscription';
 
 function Dashboard() {
@@ -59,27 +59,52 @@ function Dashboard() {
     navigate('/');
   };
 
-
-    // Fetch design requests - currently using dummy data
-    // In production, this would be an API call with the token
-    setDesignRequests([
-      {
-        id: 1,
-        status: 'Pending',
-        type: 'Living Room',
-        submittedDate: '2024-03-15',
-        designer: 'Not Assigned'
-      },
-      {
-        id: 2,
-        status: 'In Progress',
-        type: 'Kitchen',
-        submittedDate: '2024-03-10',
-        designer: 'Sarah Wilson'
+const fetchProjects = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    ]);
+
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      console.log('Fetching from:', apiUrl); // Debug log
+
+      const response = await fetch(`${apiUrl}/api/projects`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Received data:', data); // Debug log
+
+      // Ensure data is an array before mapping
+      const projectsArray = Array.isArray(data) ? data : data.projects || [];
+
+      const formattedRequests = projectsArray.map(project => ({
+        id: project.id,
+        status: project.status || 'Pending',
+        type: project.rooms?.length > 0 ? project.rooms.map(r => r.type).join(', ') : 'N/A',
+        submittedDate: new Date(project.created_at).toLocaleDateString(),
+        designer: project.designer_id ? 'Assigned' : 'Not Assigned',
+        action: `/project/${project.id}`
+      }));
+
+      setDesignRequests(formattedRequests);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setLoading(false);
+    }
+  };
     
-    setLoading(false);
+    fetchProjects();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -192,43 +217,49 @@ function Dashboard() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+            <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rooms</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Floor Plan</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {designRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{request.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        request.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                        request.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {request.status}
-                      </span>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+                {designRequests.length > 0 ? (
+                    designRequests.map((request) => (
+                    <tr key={request.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{request.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            request.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                            request.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
+                            {request.status}
+                        </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.type}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.submittedDate}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.designer}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
+                        <Link to={request.action} className="hover:text-blue-900">
+                            View Details
+                        </Link>
+                        </td>
+                    </tr>
+                    ))
+                ) : (
+                    <tr>
+                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                        No design requests found. Create your first one!
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.type}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.submittedDate}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.designer}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button 
-                        onClick={() => navigate(`/design/${request.id}`)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                    </tr>
+                )}
+                </tbody>
             </table>
           </div>
         </div>

@@ -14,6 +14,8 @@ import DashBoard from './components/DashBoard';
 import ContactUs from './components/ContactForm';
 import DesignerDashboard from './components/DesignerDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import ProjectDetails from './components/ProjectDetails';
+import DesignerProjectDetails from './components/DesignerProjectDetails';
 
 function App() {
   return (
@@ -33,6 +35,8 @@ function App() {
           <Route path="/contactus" element={<ContactUs />} />
           <Route path="/designer-dashboard" element={<DesignerDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/project/:id" element={<ProjectDetails />} />
+          <Route path="/designer/projects/:id" element={<DesignerProjectDetails />} />
         </Routes>
       </div>
     </Router>

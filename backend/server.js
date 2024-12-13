@@ -904,8 +904,113 @@ const copyFileToProjectFolder = async (sourceUrl) => {
   }
 });
 
-// Get user's projects
-app.get('/api/projects', async (req, res) => {
+// Add this endpoint before the catch-all route in server.js
+app.get('/api/projects/:id', async (req, res) => {
+  const { id } = req.params;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    // First, check if the user has access to this project
+    const accessCheck = await pool.query(`
+      SELECT p.id 
+      FROM projects p
+      WHERE p.id = $1
+      AND (
+        -- User is the project owner
+        p.user_id = (SELECT id FROM users WHERE email = $2)
+        OR 
+        -- User is the assigned designer
+        p.designer_id = (SELECT id FROM users WHERE email = $2)
+      )
+    `, [id, decoded.username]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Get project details including rooms and floor plans
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        pf.floor_plan_url,
+        pf.tagged_floor_plan_url,
+        u.email as client_email,
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', pr.id,
+            'type', pr.room_type,
+            'square_footage', pr.square_footage,
+            'length', pr.length,
+            'width', pr.width,
+            'height', pr.height,
+            'design_preferences', (
+              SELECT jsonb_build_object(
+                'style', rdp.style,
+                'description', rdp.description
+              )
+              FROM room_design_preferences rdp
+              WHERE rdp.room_id = pr.id
+            ),
+            'existing_photos', (
+              SELECT json_agg(
+                jsonb_build_object('photo_url', rp.photo_url)
+              )
+              FROM room_photos rp
+              WHERE rp.room_id = pr.id AND rp.photo_type = 'existing'
+            ),
+            'inspiration_photos', (
+              SELECT json_agg(
+                jsonb_build_object('photo_url', rp.photo_url)
+              )
+              FROM room_photos rp
+              WHERE rp.room_id = pr.id AND rp.photo_type = 'inspiration'
+            )
+          )
+        ) as rooms,
+        (
+          SELECT json_agg(
+            jsonb_build_object(
+              'design_url', pfd.design_url
+            )
+          )
+          FROM project_final_designs pfd
+          WHERE pfd.project_id = p.id
+        ) as final_designs
+      FROM projects p
+      LEFT JOIN project_floor_plans pf ON p.id = pf.project_id
+      LEFT JOIN project_rooms pr ON p.id = pr.project_id
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.id = $1
+      GROUP BY p.id, pf.floor_plan_url, pf.tagged_floor_plan_url, u.email
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Clean up null arrays
+    const project = result.rows[0];
+    if (project.rooms[0] === null) {
+      project.rooms = [];
+    }
+    if (project.final_designs === null) {
+      project.final_designs = [];
+    }
+    
+    res.json(project);
+  } catch (error) {
+    console.error('Error fetching project details:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add these endpoints to server.js
+
+// Get comments for a specific design
+app.get('/api/projects/:projectId/designs/:designId/comments', async (req, res) => {
+  const { projectId, designId } = req.params;
   const token = req.headers.authorization?.split(' ')[1];
   
   try {
@@ -913,39 +1018,269 @@ app.get('/api/projects', async (req, res) => {
     
     const result = await pool.query(`
       SELECT 
-        p.id,
-        p.status,
-        p.created_at,
-        p.last_modified_at,
-        p.has_floor_plan,
+        dc.id,
+        dc.comment_text,
+        dc.created_at,
+        u.email as user_email
+      FROM design_comments dc
+      JOIN users u ON dc.user_id = u.id
+      WHERE dc.project_id = $1 AND dc.design_id = $2
+      ORDER BY dc.created_at DESC
+    `, [projectId, designId]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching design comments:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add a comment to a design
+app.post('/api/projects/:projectId/designs/:designId/comments', async (req, res) => {
+  const { projectId, designId } = req.params;
+  const { comment_text } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [decoded.username]
+    );
+    const userId = userResult.rows[0].id;
+    
+    const result = await pool.query(`
+      INSERT INTO design_comments 
+        (project_id, design_id, user_id, comment_text, created_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      RETURNING id, created_at
+    `, [projectId, designId, userId, comment_text]);
+    
+    res.status(201).json({
+      id: result.rows[0].id,
+      created_at: result.rows[0].created_at,
+      user_email: decoded.username,
+      comment_text
+    });
+  } catch (error) {
+    console.error('Error adding design comment:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user's projects
+app.get('/api/projects', async (req, res) => {
+  console.log("requesting for project.....");
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    // Update the project details query to include design IDs
+    const result = await pool.query(`
+      SELECT 
+        p.*,
         pf.floor_plan_url,
-        json_agg(DISTINCT jsonb_build_object(
-          'id', pr.id,
-          'type', pr.room_type,
-          'squareFootage', pr.square_footage,
-          'dimensions', jsonb_build_object(
+        pf.tagged_floor_plan_url,
+        u.email as client_email,
+        (
+          SELECT json_agg(
+            jsonb_build_object(
+              'id', pfd.id,
+              'design_url', pfd.design_url,
+              'created_at', pfd.created_at
+            )
+          )
+          FROM project_final_designs pfd
+          WHERE pfd.project_id = p.id
+        ) as final_designs,
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', pr.id,
+            'type', pr.room_type,
+            'square_footage', pr.square_footage,
             'length', pr.length,
             'width', pr.width,
-            'height', pr.height
+            'height', pr.height,
+            'design_preferences', (
+              SELECT jsonb_build_object(
+                'style', rdp.style,
+                'description', rdp.description
+              )
+              FROM room_design_preferences rdp
+              WHERE rdp.room_id = pr.id
+            ),
+            'existing_photos', (
+              SELECT json_agg(
+                jsonb_build_object('photo_url', rp.photo_url)
+              )
+              FROM room_photos rp
+              WHERE rp.room_id = pr.id AND rp.photo_type = 'existing'
+            ),
+            'inspiration_photos', (
+              SELECT json_agg(
+                jsonb_build_object('photo_url', rp.photo_url)
+              )
+              FROM room_photos rp
+              WHERE rp.room_id = pr.id AND rp.photo_type = 'inspiration'
+            )
           )
-        )) as rooms,
-        json_agg(DISTINCT jsonb_build_object(
-          'roomName', rt.room_name,
-          'x', rt.x_coordinate,
-          'y', rt.y_coordinate
-        )) FILTER (WHERE rt.id IS NOT NULL) as room_tags
+        ) as rooms
       FROM projects p
       LEFT JOIN project_floor_plans pf ON p.id = pf.project_id
       LEFT JOIN project_rooms pr ON p.id = pr.project_id
-      LEFT JOIN room_tags rt ON p.id = rt.project_id
-      WHERE p.user_id = (SELECT id FROM users WHERE email = $1)
-      GROUP BY p.id, pf.floor_plan_url
-      ORDER BY p.created_at DESC
-    `, [decoded.username]);
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.id = $1
+      GROUP BY p.id, pf.floor_plan_url, pf.tagged_floor_plan_url, u.email
+    `, [id]);
 
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching projects:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add these endpoints to server.js
+
+// Upload designer's floor plan version
+app.post('/api/designer/projects/:projectId/floor-plan', async (req, res) => {
+  const { projectId } = req.params;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  floorPlanUpload(req, res, async function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    try {
+      const decoded = jwt.verify(token, 'secret-key');
+      
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
+      }
+
+      const designerFloorPlanUrl = req.files[0].location;
+
+      const result = await pool.query(`
+        UPDATE projects
+        SET designer_floor_plan_url = $1,
+            last_modified_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING *
+      `, [designerFloorPlanUrl, projectId]);
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+// Upload final designs
+app.post('/api/designer/projects/:projectId/final-designs', async (req, res) => {
+  const { projectId } = req.params;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  imageUpload(req, res, async function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    try {
+      const decoded = jwt.verify(token, 'secret-key');
+      
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
+      }
+
+      const designUrls = req.files.map(file => file.location);
+      
+      // Insert designs and return their IDs
+      const insertResults = await Promise.all(
+        designUrls.map(url => 
+          pool.query(
+            `INSERT INTO project_final_designs (project_id, design_url)
+             VALUES ($1, $2)
+             RETURNING id, design_url, created_at`,
+            [projectId, url]
+          )
+        )
+      );
+
+      const designs = insertResults.map(result => ({
+        id: result.rows[0].id,
+        design_url: result.rows[0].design_url,
+        created_at: result.rows[0].created_at
+      }));
+
+      // Update project status
+      await pool.query(`
+        UPDATE projects
+        SET status = 'completed',
+            completed = true,
+            last_modified_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [projectId]);
+
+      res.json({ designs });
+    } catch (error) {
+      console.error('Error uploading designs:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+// Add these endpoints to server.js
+// Get comments for a project
+app.get('/api/projects/:projectId/comments', async (req, res) => {
+  const { projectId } = req.params;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    const result = await pool.query(`
+      SELECT 
+        fc.id,
+        fc.comment_text,
+        fc.created_at,
+        u.email as user_email
+      FROM floor_plan_comments fc
+      JOIN users u ON fc.user_id = u.id
+      WHERE fc.project_id = $1
+      ORDER BY fc.created_at DESC
+    `, [projectId]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+// Make sure this endpoint exists in server.js
+app.post('/api/projects/:projectId/comments', async (req, res) => {
+  const { projectId } = req.params;
+  const { comment_text } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [decoded.username]);
+    const userId = userResult.rows[0].id;
+    
+    const result = await pool.query(`
+      INSERT INTO floor_plan_comments 
+        (project_id, user_id, comment_text)
+      VALUES ($1, $2, $3)
+      RETURNING id, created_at
+    `, [projectId, userId, comment_text]);
+    
+    res.status(201).json({
+      ...result.rows[0],
+      user_email: decoded.username,
+      comment_text
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
