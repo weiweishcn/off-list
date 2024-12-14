@@ -171,7 +171,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = 'http://localhost:3001';
+      const apiUrl = process.env.REACT_APP_API_URL;
       
       // Fetch projects
       const projectsResponse = await fetch(`${apiUrl}/api/admin/projects`, {
