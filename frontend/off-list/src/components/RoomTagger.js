@@ -34,55 +34,43 @@ const RoomTagger = ({ floorPlanUrl, rooms, onTagsUpdate, isPreviewMode = false, 
     return roomColors[roomType] || roomColors.default;
   };
 
-
   useEffect(() => {
-  const loadImage = async () => {
-    if (!floorPlanUrl) {
-      console.error('No floor plan URL provided');
-      setError('No floor plan URL provided');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const img = new window.Image();
-      img.crossOrigin = 'anonymous';  // Keep this
-      
-      // Add cache-busting and CORS mode
-      const imgUrl = new URL(floorPlanUrl);
-      imgUrl.searchParams.append('t', Date.now());  // Cache busting
-      
-      const loadPromise = new Promise((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = (e) => {
-          console.error('Image load error:', e);
-          reject(new Error('Failed to load image'));
-        };
-      });
-
-      // Try to pre-fetch with CORS headers
-      try {
-        const response = await fetch(floorPlanUrl, {
-          mode: 'cors',
-          credentials: 'omit',
-          headers: {
-            'Origin': window.location.origin
-          }
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch image');
-        
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        img.src = objectUrl;
-      } catch (fetchError) {
-        console.warn('Failed to pre-fetch, falling back to direct load:', fetchError);
-        img.src = imgUrl.toString();
+    const loadImage = async () => {
+      if (!floorPlanUrl) {
+        console.error('No floor plan URL provided');
+        setError('No floor plan URL provided');
+        setLoading(false);
+        return;
       }
 
+      try {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+
+        const loadPromise = new Promise((resolve, reject) => {
+          img.onload = () => {
+            console.log('Image loaded successfully:', img.width, 'x', img.height);
+            resolve(img);
+          };
+          img.onerror = (e) => {
+            console.error('Image load error:', e);
+            reject(new Error('Failed to load image'));
+          };
+        });
+
+        // Add this function at the top of RoomTagger.js
+        const getProxiedImageUrl = (url) => {
+        const apiUrl = process.env.REACT_APP_API_URL;
+        return `${apiUrl}/proxy-image?url=${encodeURIComponent(url)}`;
+        };
+
+        // Then modify the image loading code:
+        img.src = getProxiedImageUrl(floorPlanUrl);
+
+        //img.src = floorPlanUrl;
         const loadedImage = await loadPromise;
 
-               if (containerRef.current) {
+        if (containerRef.current) {
           const containerWidth = containerRef.current.offsetWidth;
           const aspectRatio = loadedImage.width / loadedImage.height;
           let newHeight = containerWidth / aspectRatio;
