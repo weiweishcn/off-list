@@ -14,6 +14,7 @@ const { env } = require('process');
 const designData = require('./DesignData');
 console.log('Loaded design data:', designData);
 const zlib = require('zlib');
+const fetch = require('node-fetch');  // Make sure to install this: npm install node-fetch
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1308,6 +1309,33 @@ app.post('/api/projects/:projectId/comments', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).send('URL parameter is required');
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+
+    // Forward content type and length headers
+    res.set('Content-Type', response.headers.get('content-type'));
+    res.set('Content-Length', response.headers.get('content-length'));
+    
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    
+    // Stream the response
+    response.body.pipe(res);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).send('Error proxying image');
   }
 });
 
