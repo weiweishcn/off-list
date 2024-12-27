@@ -428,6 +428,48 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
+app.post('/api/create-payment-session', authenticateToken, async (req, res) => {
+  try {
+    const { amount, projectDetails } = req.body;
+
+    // Create a Stripe session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Interior Design Project',
+              description: `Design service for ${projectDetails.rooms.length} rooms`,
+              metadata: {
+                projectId: projectDetails.id // If you have a project ID
+              }
+            },
+            unit_amount: Math.round(amount * 100), // Convert to cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL}/design/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/design/create`,
+      metadata: {
+        userId: req.user.id,
+        projectDetails: JSON.stringify(projectDetails)
+      }
+    });
+
+    res.json({ sessionId: session.id });
+  } catch (error) {
+    console.error('Stripe session creation failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to create payment session',
+      message: error.message 
+    });
+  }
+});
+
 app.get('/api/properties', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM properties');
@@ -601,59 +643,6 @@ app.get('/api/admin/projects', async (req, res) => {
 });
 
 // Get all designers
-app.get('/api/admin/designers', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  try {
-    const decoded = jwt.verify(token, 'secret-key');
-    if (decoded.userType !== 'admin') {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    const result = await pool.query(`
-      SELECT id, email 
-      FROM users 
-      WHERE user_type = 'designer'
-      ORDER BY email ASC
-    `);
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching designers:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Assign designer to project
-app.post('/api/admin/projects/:projectId/assign', async (req, res) => {
-  const { projectId } = req.params;
-  const { designerId } = req.body;
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  try {
-    const decoded = jwt.verify(token, 'secret-key');
-    if (decoded.userType !== 'admin') {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    const result = await pool.query(`
-      UPDATE projects 
-      SET designer_id = $1, 
-          last_modified_at = CURRENT_TIMESTAMP 
-      WHERE id = $2 
-      RETURNING *
-    `, [designerId, projectId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error assigning designer:', error);
-    res.status(500).json({ error: error.message });
-  }
-});// Get all designers
 app.get('/api/admin/designers', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   
@@ -1166,8 +1155,6 @@ app.get('/api/projects', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// Add these endpoints to server.js
 
 // Upload designer's floor plan version
 app.post('/api/designer/projects/:projectId/floor-plan', async (req, res) => {
