@@ -1,107 +1,88 @@
-import React, { useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
-// Configure pdf.js worker
+// Set up the worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-const ReactPdfViewer = ({ pdfUrl }) => {
-  const [numPages, setNumPages] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const ReactPdfViewer = ({ pdfUrl, onPdfRendered, onLoad }) => {
+  const containerRef = useRef(null);
+  const [numPages, setNumPages] = useState(1);
+  const [pageWidth, setPageWidth] = useState(null);
 
-  const onDocumentLoadSuccess = ({ numPages }) => {
-    console.log('PDF loaded successfully with', numPages, 'pages');
-    setNumPages(numPages);
-    setLoading(false);
-  };
-
-  const onDocumentLoadError = (error) => {
-    console.error('Error loading PDF:', error);
-    setError(error);
-    setLoading(false);
-  };
-
-  // Add a timeout to prevent infinite loading
-  React.useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        setError(new Error('Loading timed out - please try again'));
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setPageWidth(containerRef.current.offsetWidth);
       }
-    }, 15000); // 15 second timeout
+    };
 
-    return () => clearTimeout(timeoutId);
-  }, [loading]);
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
 
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= numPages) {
-      setCurrentPage(page);
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (containerRef.current && onPdfRendered) {
+      onPdfRendered(containerRef.current);
+    }
+  }, [onPdfRendered]);
+
+  const handleLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+    if (onLoad) {
+      onLoad({ numPages });
     }
   };
 
-  return (
-    <div className="flex flex-col items-center space-y-4">
-      {loading && (
-        <div className="flex items-center justify-center p-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-        </div>
-      )}
-      
-      {error && (
-        <div className="text-red-600 p-4">
-          Error loading PDF: {error.message}
-        </div>
-      )}
+  const handleLoadError = (error) => {
+    console.error('Error loading PDF:', error);
+  };
 
-      <Document
+  return (
+    <div 
+      ref={containerRef} 
+      className="pdf-container"
+      style={{ width: '100%', height: '100%', overflow: 'auto' }}
+    >
+      <Document 
         file={pdfUrl}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={onDocumentLoadError}
+        onLoadSuccess={handleLoadSuccess}
+        onLoadError={handleLoadError}
         loading={
-          <div className="flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        }
+        error={
+          <div className="flex items-center justify-center h-full text-red-500">
+            Failed to load PDF. Please try again.
           </div>
         }
       >
         <Page 
-          pageNumber={currentPage}
-          className="max-w-full"
+          pageNumber={1}
+          width={pageWidth}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
           loading={
-            <div className="flex items-center justify-center p-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
           }
         />
       </Document>
-
-      {numPages && (
-        <div className="flex items-center space-x-4 p-4">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          
-          <span className="text-gray-700">
-            Page {currentPage} of {numPages}
-          </span>
-          
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage >= numPages}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </div>
   );
+};
+
+ReactPdfViewer.defaultProps = {
+  onPdfRendered: () => {},
+  onLoad: () => {}
 };
 
 export default ReactPdfViewer;

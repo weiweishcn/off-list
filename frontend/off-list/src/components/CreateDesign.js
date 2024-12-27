@@ -875,7 +875,7 @@ case 'roomDetails':
         <div key={room.id} className="bg-white p-6 rounded-lg shadow-sm mb-6">
           <h3 className="text-lg font-medium mb-4">{room.roomName} Details</h3>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-1">Style Preference</label>
               <select
@@ -928,6 +928,108 @@ case 'roomDetails':
               </select>
             </div>
 
+            {/* Current Room Photos */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Current Room Photos
+                <span className="block text-gray-500 text-xs mt-1">
+                  Upload photos showing how the room currently looks
+                </span>
+              </label>
+              <FileUpload
+                onUploadComplete={(urls) => {
+                  setRoomDetails(prev => ({
+                    ...prev,
+                    [room.id]: {
+                      ...prev[room.id],
+                      existingPhotos: urls
+                    }
+                  }));
+                }}
+                accept="image/jpeg,image/png,image/jpg"
+                uploadType="existing"
+              />
+              {roomDetails[room.id]?.existingPhotos?.length > 0 && (
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {roomDetails[room.id].existingPhotos.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Current room ${index + 1}`}
+                        className="w-full h-40 object-cover rounded-md"
+                      />
+                      <button
+                        onClick={() => {
+                          setRoomDetails(prev => ({
+                            ...prev,
+                            [room.id]: {
+                              ...prev[room.id],
+                              existingPhotos: prev[room.id].existingPhotos.filter((_, i) => i !== index)
+                            }
+                          }));
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full 
+                                 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Inspiration Photos */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Inspiration Photos
+                <span className="block text-gray-500 text-xs mt-1">
+                  Upload photos of designs you'd like to incorporate
+                </span>
+              </label>
+              <FileUpload
+                onUploadComplete={(urls) => {
+                  setRoomDetails(prev => ({
+                    ...prev,
+                    [room.id]: {
+                      ...prev[room.id],
+                      inspirationPhotos: urls
+                    }
+                  }));
+                }}
+                accept="image/jpeg,image/png,image/jpg"
+                uploadType="inspiration"
+              />
+              {roomDetails[room.id]?.inspirationPhotos?.length > 0 && (
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {roomDetails[room.id].inspirationPhotos.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Inspiration ${index + 1}`}
+                        className="w-full h-40 object-cover rounded-md"
+                      />
+                      <button
+                        onClick={() => {
+                          setRoomDetails(prev => ({
+                            ...prev,
+                            [room.id]: {
+                              ...prev[room.id],
+                              inspirationPhotos: prev[room.id].inspirationPhotos.filter((_, i) => i !== index)
+                            }
+                          }));
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full 
+                                 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Specific Requirements</label>
               <textarea
@@ -949,31 +1051,8 @@ case 'roomDetails':
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Budget Range</label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={roomDetails[room.id]?.budget || ''}
-                onChange={(e) => {
-                  setRoomDetails(prev => ({
-                    ...prev,
-                    [room.id]: {
-                      ...prev[room.id],
-                      budget: e.target.value
-                    }
-                  }));
-                }}
-              >
-                <option value="">Select budget range</option>
-                <option value="budget">Budget-Friendly</option>
-                <option value="mid-range">Mid-Range</option>
-                <option value="luxury">Luxury</option>
-                <option value="ultra-luxury">Ultra Luxury</option>
-              </select>
-            </div>
-
             {/* Display dimensions from room tagging */}
-                        <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4">
               <h4 className="text-sm font-medium">Room Dimensions</h4>
               
               <div>
