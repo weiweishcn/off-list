@@ -123,8 +123,105 @@ const CreateDesign = () => {
   ]);
   const [roomTags, setRoomTags] = useState([]);
 
+  // Add these new state variables to CreateDesign component
+const [projectId, setProjectId] = useState(null);
+const [projectFolder, setProjectFolder] = useState(null);
 
-    const handleRoomTypeSelect = (roomType) => {
+// Add initializeProject function
+const initializeProject = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setShowError({
+        show: true,
+        message: 'Please log in to create a design'
+      });
+      return false;
+    }
+
+    const response = await axios.post(
+      `${process.env.REACT_APP_API_URL}/api/projects/initialize`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    setProjectId(response.data.projectId);
+    setProjectFolder(response.data.projectFolder);
+    return true;
+
+  } catch (error) {
+    console.error('Error initializing project:', error);
+    setShowError({
+      show: true,
+      message: error.response?.data?.message || 'Failed to initialize project'
+    });
+    return false;
+  }
+};
+
+// Modify useEffect to initialize project on component mount
+useEffect(() => {
+  initializeProject();
+}, []);
+
+// Add function to save progress
+const saveProgress = async () => {
+  if (!projectId) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    await axios.put(
+      `${process.env.REACT_APP_API_URL}/api/projects/${projectId}`,
+      {
+        designType,
+        rooms: taggedRooms.map(room => ({
+          ...room,
+          details: roomDetails[room.id]
+        })),
+        hasFloorPlan: hasExistingFloorPlan,
+        floorPlanUrls,
+        status: 'draft'
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    setShowError({
+      show: true,
+      message: 'Progress saved successfully'
+    });
+
+  } catch (error) {
+    console.error('Error saving progress:', error);
+    setShowError({
+      show: true,
+      message: 'Failed to save progress'
+    });
+  }
+};
+
+// Modify FileUpload usage to include project folder
+<FileUpload
+  onUploadComplete={(urls) => {
+    console.log('Floor plan URLs received:', urls);
+    setFloorPlanUrls(urls);
+  }}
+  accept="application/pdf,image/jpeg,image/png"
+  uploadType="floor_plan"
+  projectFolder={projectFolder}  // Add this prop
+/>
+
+
+  const handleRoomTypeSelect = (roomType) => {
     setSelectedRoomType(roomType);
   };
 
@@ -352,15 +449,11 @@ const isCurrentStepValid = () => {
       // Require at least one tagged room
       return taggedRooms.length > 0;
     case 'roomDetails':
-      // Check if all tagged rooms have complete details including dimensions
+      // Check if all tagged rooms have required details (style and squareFootage)
       return taggedRooms.every(room => {
         const details = roomDetails[room.id];
         return details?.style && 
-               details?.description?.trim().length > 0 &&
-               details?.squareFootage &&
-               details?.length &&
-               details?.width &&
-               details?.height;
+               details?.squareFootage;
       });
     default:
       return true;
@@ -648,6 +741,7 @@ case 'floorPlanChoice':
               }}
               accept="application/pdf,image/jpeg,image/png"
               uploadType="floor_plan"
+              projectFolder={projectFolder}
             />
 
             {floorPlanUrls.length > 0 && (
@@ -1063,6 +1157,7 @@ case 'roomDetails':
 
 // In CreateDesign.js, add logging to track the floor plan URL:
  case 'floorPlanUpload':
+  console.log("upload via createdesign.js");
         const handleFileUpload = async (files) => {
           if (!files || files.length === 0) return;
 
@@ -1074,6 +1169,7 @@ case 'roomDetails':
           } else {
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('projectFolder', projectFolder);  // Add this line
 
             try {
               const response = await axios.post(

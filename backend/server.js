@@ -166,37 +166,156 @@ const listS3FolderContents = async (folderPrefix) => {
   }
 };
 
-// Regular image upload configuration
+// Add new endpoint for project initialization
+app.post('/api/projects/initialize', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  let client;
+
+  try {
+    // Verify user
+    const decoded = jwt.verify(token, 'secret-key');
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [decoded.username]
+    );
+    const userId = userResult.rows[0].id;
+
+    // Start transaction
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // Create initial project record
+    const projectResult = await client.query(`
+      INSERT INTO projects 
+        (user_id, status, created_at, last_modified_at, name)
+      VALUES 
+        ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)
+      RETURNING id
+    `, [userId, 'draft', `Project ${new Date().toLocaleDateString()}`]);
+
+    const projectId = projectResult.rows[0].id;
+    const projectFolder = `projects/project-${projectId}`;
+
+    // Create project folder in S3 (this is just a prefix, no actual folder needs to be created)
+    // You might want to add a placeholder file to make the folder visible in S3 console
+    await s3.putObject({
+      Bucket: 'designimages',
+      Key: `${projectFolder}/.placeholder`,
+      Body: 'Project folder placeholder',
+      ACL: 'public-read'
+    }).promise();
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      projectId,
+      projectFolder,
+      message: 'Project initialized successfully'
+    });
+    console.log('project initialized' + projectId, projectFolder);
+
+  } catch (error) {
+    if (client) await client.query('ROLLBACK');
+    console.error('Error initializing project:', error);
+    res.status(500).json({
+      error: 'Failed to initialize project',
+      details: error.message
+    });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Modify file upload configurations to use project folder
 const imageUpload = multer({
   storage: multerS3({
     s3: s3,
     bucket: 'designimages',
     acl: 'public-read',
     key: function (req, file, cb) {
+      const projectFolder = req.body.projectFolder;
+      if (!projectFolder) {
+        return cb(new Error('Project folder not specified'));
+      }
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const originalName = file.originalname || '';
-      const fileExtension = originalName.split('.').pop() || '';
-      cb(null, `${file.fieldname}-${uniqueSuffix}${fileExtension ? '.' + fileExtension : ''}`);
+      const fileExtension = path.extname(file.originalname) || '';
+      cb(null, `${projectFolder}/${file.fieldname}-${uniqueSuffix}${fileExtension}`);
     }
   }),
   limits: {
     fileSize: 100 * 1024 * 1024,
     files: 10
-  },
-  fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === 'image/png' ||
-      file.mimetype === 'image/jpeg' ||
-      file.mimetype === 'image/jpg'
-    ) {
-      cb(null, true);
-    } else {
-      const err = new Error('Images must be JPG or PNG');
-      err.name = 'ExtensionError';
-      return cb(err);
-    }
   }
-}).array('uploadFiles', 10);
+});
+
+// Modify upload endpoints to require project folder
+app.post('/api/upload', (req, res) => {
+  if (!req.body.projectFolder) {
+    return res.status(400).json({
+      error: { msg: 'Project folder not specified' }
+    });
+  }
+
+  imageUpload(req, res, function(err) {
+    if (err) {
+      console.error('Upload error:', err);
+      return res.status(500).json({
+        error: { msg: `Upload error: ${err.message}` }
+      });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        error: { msg: 'No files uploaded' }
+      });
+    }
+
+    const imageUrls = req.files.map(file => file.location);
+    res.status(200).json({ imageUrls });
+  });
+});
+
+// Update project endpoint for saving progress
+app.put('/api/projects/:projectId', async (req, res) => {
+  const { projectId } = req.params;
+  const { designType, rooms, hasFloorPlan, floorPlanUrls, status } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    // Update project details
+    await pool.query(`
+      UPDATE projects 
+      SET 
+        design_type = $1,
+        has_floor_plan = $2,
+        status = $3,
+        last_modified_at = CURRENT_TIMESTAMP
+      WHERE id = $4 AND user_id = (SELECT id FROM users WHERE email = $5)
+    `, [designType, hasFloorPlan, status || 'draft', projectId, decoded.username]);
+
+    // Update room details if provided
+    if (rooms?.length > 0) {
+      // Implementation for updating room details
+      // This would include updating or inserting room records
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Project progress saved successfully' 
+    });
+
+  } catch (error) {
+    console.error('Error saving project progress:', error);
+    res.status(500).json({
+      error: 'Failed to save project progress',
+      details: error.message
+    });
+  }
+});
+
 
 // Floor plan upload configuration
 const floorPlanUpload = multer({
@@ -212,24 +331,17 @@ const floorPlanUpload = multer({
       });
     },
     key: function (req, file, cb) {
+      console.log('Floor plan upload request body:', req.body);
+      const projectFolder = req.body.projectFolder;
+      if (!projectFolder) {
+        return cb(new Error('Project folder not specified'));
+      }
+      //cb(null, `${projectFolder}/${file.fieldname}-${uniqueSuffix}${fileExtension}`);
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const originalName = file.originalname || '';
       const fileExtension = path.extname(originalName).toLowerCase();
-      cb(null, `floor-plan-${uniqueSuffix}${fileExtension}`);
+      cb(null, `${projectFolder}/floor-plan-${uniqueSuffix}${fileExtension}`);
     },
-    shouldTransform: function(req, file, cb) {
-      cb(null, /^image/i.test(file.mimetype))
-    },
-    transforms: [{
-      id: 'original',
-      key: function(req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, `floor-plan-${uniqueSuffix}.jpg`);
-      },
-      transform: function(req, file, cb) {
-        cb(null, sharp().jpeg({ quality: 90 }));
-      }
-    }]
   }),
   limits: {
     fileSize: 100 * 1024 * 1024,
@@ -239,6 +351,7 @@ const floorPlanUpload = multer({
 
 // Modified upload endpoint
 app.post('/api/upload-floor-plan', (req, res) => {
+  console.log('Received floor plan upload request');
   floorPlanUpload(req, res, async function (err) {
     if (err) {
       console.error('Upload error:', err);

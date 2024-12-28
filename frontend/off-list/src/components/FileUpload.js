@@ -1,7 +1,7 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 
-const FileUpload = ({ onUploadComplete, accept, uploadType }) => {
+const FileUpload = ({ onUploadComplete, accept, uploadType, projectFolder }) => {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [uploadedUrls, setUploadedUrls] = useState([]);
@@ -66,6 +66,12 @@ const onSubmit = async e => {
   setUploadProgress(0);
 
   const formData = new FormData();
+
+  // Add project folder first
+  if (projectFolder) {
+    formData.append("projectFolder", projectFolder);
+    console.log('Adding project folder to form data:', projectFolder);
+  }
   
   // Append each file along with its content type
   files.forEach((file, index) => {
@@ -78,12 +84,13 @@ const onSubmit = async e => {
 
   // Add upload type to help backend processing
   formData.append("uploadType", uploadType);
+  console.log("uploading via fileupload");
 
   try {
     const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
     const endpoint = uploadType === 'floor_plan' 
-      ? `${apiUrl}/api/upload-floor-plan/`
-      : `${apiUrl}/api/upload/`;
+      ? `${apiUrl}/api/upload-floor-plan`
+      : `${apiUrl}/api/upload`;
 
     const response = await axios.post(endpoint, formData, {
       headers: { 
