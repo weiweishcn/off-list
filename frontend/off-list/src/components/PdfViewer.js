@@ -1,11 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
-// Set the worker directly from the import
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // Rest of your component stays the same
 const ReactPdfViewer = ({ pdfUrl, onPdfRendered, onLoad }) => {
