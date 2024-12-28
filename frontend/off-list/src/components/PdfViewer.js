@@ -3,7 +3,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`;
+// Use local worker file
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 // Rest of your component stays the same
 const ReactPdfViewer = ({ pdfUrl, onPdfRendered, onLoad }) => {
