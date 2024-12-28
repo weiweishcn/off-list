@@ -448,6 +448,53 @@ const isCurrentStepValid = () => {
     }
   };
 
+  const handleSaveForLater = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    const projectData = {
+      designType,
+      status: 'draft',
+      rooms: taggedRooms.map(room => ({
+        ...room,
+        details: roomDetails[room.id]
+      })),
+      hasFloorPlan: hasExistingFloorPlan,
+      floorPlanUrls,
+      pricing: calculateTotalPrice(taggedRooms.map(room => ({
+        ...room,
+        ...roomDetails[room.id]
+      }))),
+      depositPaid: false
+    };
+
+    const response = await axios.post(
+      `${process.env.REACT_APP_API_URL}/api/projects`, 
+      projectData,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.status === 200) {
+      navigate('/dashboard', { 
+        state: { 
+          message: 'Project saved successfully! You can complete payment later from your dashboard.' 
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error saving project:', error);
+    setShowError({
+      show: true,
+      message: error.response?.data?.message || 'Failed to save project. Please try again.'
+    });
+  }
+};
+
   const renderCurrentStep = () => {
     const currentQuestion = questions[currentStep];
 
@@ -627,7 +674,6 @@ case 'pricingReview':
         <div className="p-6">
           <h3 className="text-lg font-medium mb-4">Project Cost Breakdown</h3>
           
-          {/* Room-by-room breakdown */}
           <div className="space-y-4">
             {pricingData.rooms.map((room, index) => (
               <div 
@@ -647,7 +693,6 @@ case 'pricingReview':
             ))}
           </div>
 
-{/* Total and Deposit */}
           <div className="mt-6 pt-4 border-t space-y-4">
             <div className="flex justify-between items-center text-gray-600">
               <div>
@@ -657,18 +702,14 @@ case 'pricingReview':
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-lg">
-                  ${pricingData.total.toFixed(2)}
-                </p>
+                <p className="text-lg">${pricingData.total.toFixed(2)}</p>
               </div>
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t">
               <div>
                 <h4 className="text-lg font-semibold text-blue-600">Required Deposit (60%)</h4>
-                <p className="text-sm text-gray-600">
-                  Due now to start your project
-                </p>
+                <p className="text-sm text-gray-600">Due to start your project</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-blue-600">
@@ -688,8 +729,7 @@ case 'pricingReview':
             </div>
           </div>
 
-          {/* Payment button */}
-          <div className="mt-6">
+          <div className="mt-8 space-y-4">
             <button
               onClick={handleNext}
               className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
@@ -699,9 +739,18 @@ case 'pricingReview':
                 <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </button>
+
+            <button
+              onClick={handleSaveForLater}
+              className="w-full py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+            >
+              <span>Save Project and Pay Later</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h1a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2V8a2 2 0 012-2h1v5.586l-1.293-1.293z" />
+              </svg>
+            </button>
           </div>
 
-          {/* Pricing notes */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <h4 className="text-sm font-medium mb-2">Important Notes:</h4>
             <ul className="text-sm text-gray-600 space-y-1">
@@ -709,160 +758,15 @@ case 'pricingReview':
               <li>• Current rate: $1.00 per square foot</li>
               <li>• 60% deposit is required to begin the project</li>
               <li>• Remaining 40% will be due upon design completion</li>
-              <li>• Final pricing may vary based on specific design requirements</li>
+              <li>• You can save your project now and pay the deposit later</li>
+              <li>• Design work will not begin until the deposit is paid</li>
             </ul>
           </div>
         </div>
       </div>
     </div>
   );
-/*
-        case 'roomTagging':
-        return (
-          <div className="space-y-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-              <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-            </div>
-
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-              {presetRoomTypes.map((roomType) => (
-                <button
-                  key={roomType.id}
-                  onClick={() => handleRoomTypeSelect(roomType)}
-                  className={`p-2 rounded-lg border-2 transition-all ${
-                    selectedRoomType?.id === roomType.id
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-300 hover:border-blue-300'
-                  }`}
-                >
-                  <span className="text-sm font-medium">{roomType.label}</span>
-                  {roomType.multiple && roomCounter[roomType.id] > 0 && (
-                    <span className="ml-1 text-xs text-gray-600">
-                      ({roomCounter[roomType.id]})
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg shadow-sm">
-                <RoomTagger
-                  key={floorPlanUrls[0]}
-                  floorPlanUrl={floorPlanUrls[0]}
-                  onTagAdd={handleRoomTag}
-                  selectedRoomType={selectedRoomType}
-                  roomTags={taggedRooms}
-                />
-              </div>
-
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Tagged Rooms</h3>
-                {taggedRooms.map((room) => (
-                  <div 
-                    key={room.id} 
-                    className="p-4 border rounded-lg bg-white shadow-sm"
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-medium">{room.name}</h4>
-                      <button
-                        onClick={() => {
-                          setTaggedRooms(current => 
-                            current.filter(r => r.id !== room.id)
-                          );
-                          if (roomCounter[room.type] > 0) {
-                            setRoomCounter(current => ({
-                              ...current,
-                              [room.type]: current[room.type] - 1
-                            }));
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-
-                    <div className="grid gap-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Square Footage
-                        </label>
-                        <input
-                          type="number"
-                          value={room.details.squareFootage}
-                          onChange={(e) => handleUpdateRoomDetails(room.id, {
-                            squareFootage: e.target.value
-                          })}
-                          className="w-full p-2 border rounded-md"
-                          placeholder="Enter square footage"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Length (ft)
-                          </label>
-                          <input
-                            type="number"
-                            value={room.details.length}
-                            onChange={(e) => handleUpdateRoomDetails(room.id, {
-                              length: e.target.value
-                            })}
-                            className="w-full p-2 border rounded-md"
-                            placeholder="Length"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Width (ft)
-                          </label>
-                          <input
-                            type="number"
-                            value={room.details.width}
-                            onChange={(e) => handleUpdateRoomDetails(room.id, {
-                              width: e.target.value
-                            })}
-                            className="w-full p-2 border rounded-md"
-                            placeholder="Width"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Height (ft)
-                          </label>
-                          <input
-                            type="number"
-                            value={room.details.height}
-                            onChange={(e) => handleUpdateRoomDetails(room.id, {
-                              height: e.target.value
-                            })}
-                            className="w-full p-2 border rounded-md"
-                            placeholder="Height"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {taggedRooms.length === 0 && (
-                  <p className="text-gray-500 text-center p-4">
-                    Select a room type and click on the floor plan to start tagging rooms
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-        */
         
-
 case 'roomDetails':
   return (
     <div className="space-y-6">
@@ -1349,24 +1253,24 @@ case 'roomTagging':
               Back
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              if (isCurrentStepValid()) {
-                setCurrentStep(prev => prev + 1);
-                setShowValidation(false);
-              } else {
-                setShowValidation(true);
-              }
-            }}
-            disabled={!isCurrentStepValid()}
-            className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-          >
-            Next
-          </button>
+          {questions[currentStep].type !== 'pricingReview' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isCurrentStepValid()) {
+                  setCurrentStep(prev => prev + 1);
+                  setShowValidation(false);
+                } else {
+                  setShowValidation(true);
+                }
+              }}
+              disabled={!isCurrentStepValid()}
+              className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            >
+              Next
+            </button>
+          )}
         </div>
-
-        {/* ... existing dialogs ... */}
       </div>
     </div>
   );
