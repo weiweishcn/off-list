@@ -1,11 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
-// Set up the worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set the worker directly from the import
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
+// Rest of your component stays the same
 const ReactPdfViewer = ({ pdfUrl, onPdfRendered, onLoad }) => {
   const containerRef = useRef(null);
   const [numPages, setNumPages] = useState(1);
