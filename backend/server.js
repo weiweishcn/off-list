@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://165.232.131.137:3000', 'https://pencildogs.com', 'http://139.59.97.222:3000'],
+  origin: ['http://localhost:3000', 'http://165.232.131.137:3000', 'https://pencildogs.com', 'http://139.59.97.222:3000', 'http://146.190.149.3:3000', 'http://146.190.149.3'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
