@@ -428,6 +428,7 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
+/*
 app.post('/api/create-payment-session', authenticateToken, async (req, res) => {
   try {
     const { amount, projectDetails } = req.body;
@@ -469,7 +470,7 @@ app.post('/api/create-payment-session', authenticateToken, async (req, res) => {
     });
   }
 });
-
+*/
 app.get('/api/properties', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM properties');
