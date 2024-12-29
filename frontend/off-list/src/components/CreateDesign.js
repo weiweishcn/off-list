@@ -100,6 +100,7 @@ const CreateDesign = () => {
 
   // Your existing state declarations
   const form = useRef();
+  const roomTaggerRef = useRef(null); // Add this ref at component level
   const navigate = useNavigate();
   const [showError, setShowError] = useState({ show: false, message: '' });
   const [currentStep, setCurrentStep] = useState(0);
@@ -126,6 +127,24 @@ const CreateDesign = () => {
   // Add these new state variables to CreateDesign component
 const [projectId, setProjectId] = useState(null);
 const [projectFolder, setProjectFolder] = useState(null);
+
+  const handleTaggedFloorPlanNext = async () => {
+    try {
+      if (roomTaggerRef.current) {
+        const taggedUrl = await roomTaggerRef.current.captureAndUploadTags();
+        if (taggedUrl) {
+          setFloorPlanUrls(prev => [...prev, taggedUrl]);
+          setCurrentStep(prev => prev + 1);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling next:', error);
+      setShowError({
+        show: true,
+        message: 'Failed to save tagged floor plan. Please try again.'
+      });
+    }
+  };
 
 // Add initializeProject function
 const initializeProject = async () => {
@@ -366,11 +385,37 @@ const questions = [
   };
 
 const handleNext = async () => {
+  console.log("handlenext triggered");
   if (!isCurrentStepValid()) {
     setShowValidation(true);
     return;
   }
   const currentQuestion = questions[currentStep];
+  console.log("handlenext triggered");
+  // Special handling for room tagging step
+  if (currentQuestion.type === 'roomTagging') {
+    console.log("updating tagged floor plan");
+    try {
+      if (roomTaggerRef.current) {
+        console.log('Capturing and uploading tagged floor plan...');
+        const taggedUrl = await roomTaggerRef.current.captureAndUploadTags();
+        if (taggedUrl) {
+          console.log('Tagged floor plan uploaded successfully:', taggedUrl);
+          setFloorPlanUrls(prev => [...prev, taggedUrl]);
+          setCurrentStep(prev => prev + 1);
+          setShowValidation(false);
+        }
+      }
+      return;
+    } catch (error) {
+      console.error('Error handling room tagging next:', error);
+      setShowError({
+        show: true,
+        message: 'Failed to save tagged floor plan. Please try again.'
+      });
+      return;
+    }
+  }
 
   // If we're on the pricing review step, redirect to Stripe
   if (currentQuestion.type === 'pricingReview') {
@@ -946,6 +991,9 @@ case 'roomDetails':
                 }}
                 accept="image/jpeg,image/png,image/jpg"
                 uploadType="existing"
+                projectFolder={projectFolder}
+                roomType={room.type}    // Add these
+                roomId={room.id}        // Add these
               />
               {roomDetails[room.id]?.existingPhotos?.length > 0 && (
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -997,6 +1045,9 @@ case 'roomDetails':
                 }}
                 accept="image/jpeg,image/png,image/jpg"
                 uploadType="inspiration"
+                projectFolder={projectFolder}
+                roomType={room.type}    // Add these
+                roomId={room.id}        // Add these
               />
               {roomDetails[room.id]?.inspirationPhotos?.length > 0 && (
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1237,13 +1288,27 @@ case 'roomDetails':
 
 case 'roomTagging':
   const currentFloorPlanUrl = floorPlanUrls[0];
-  console.log('Current floor plan URL:', currentFloorPlanUrl);
-
+  
+  let content;
   if (!currentFloorPlanUrl) {
-    return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-        <p className="text-red-600">No floor plan found. Please go back and upload a floor plan.</p>
+    content = (
+      <p className="text-red-600">No floor plan found. Please go back and upload a floor plan.</p>
+    );
+  } else {
+    content = (
+      <div className="bg-white rounded-lg shadow-sm">
+        <RoomTagger
+          ref={roomTaggerRef}
+          floorPlanUrl={currentFloorPlanUrl}
+          rooms={presetRoomTypes}
+          onTagsUpdate={(newTags) => {
+            setTaggedRooms(newTags);
+            console.log('Tags updated:', newTags);
+          }}
+          isPreviewMode={false}
+          initialTags={taggedRooms}
+          projectFolder={projectFolder}
+        />
       </div>
     );
   }
@@ -1252,67 +1317,9 @@ case 'roomTagging':
     <div className="space-y-4">
       <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
       <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-      
-      <div className="bg-white rounded-lg shadow-sm">
-        <RoomTagger
-          key={floorPlanUrls[0]}
-          floorPlanUrl={floorPlanUrls[0]}
-          rooms={presetRoomTypes}
-          onTagsUpdate={(newTags) => {
-            setTaggedRooms(newTags);
-            console.log('Tags updated:', newTags);
-          }}
-          isPreviewMode={false}
-          initialTags={taggedRooms}
-        />
-      </div>
+      {content}
     </div>
   );
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-      
-      <div className="bg-white rounded-lg shadow-sm">
-        <RoomTagger
-          key={floorPlanUrls[0]}
-          floorPlanUrl={floorPlanUrls[0]}
-          rooms={presetRoomTypes}
-          onTagsUpdate={(newTags) => {
-            setTaggedRooms(newTags);
-            console.log('Tags updated:', newTags);
-          }}
-          isPreviewMode={false}
-          initialTags={taggedRooms}
-        />
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-              <div className="bg-white rounded-lg shadow-sm">
-                <RoomTagger
-                  key={floorPlanUrls[0]}
-                  floorPlanUrl={floorPlanUrls[0]}
-                  rooms={presetRoomTypes}
-                  selectedRoomType={selectedRoomType}
-                  onTagAdd={(room) => setSelectedRoomType(room)}
-                  onTagsUpdate={(newTags) => {
-                    setTaggedRooms(newTags);
-                  }}
-                  isPreviewMode={false}
-                  initialTags={taggedRooms}
-                />
-              </div>
-    </div>
-  );
-
-      // Add other cases for remaining steps...
-
       default:
         return null;
     }
@@ -1320,10 +1327,8 @@ case 'roomTagging':
 
   // ... rest of the component (navigation, dialogs, etc.) remains similar
 
-  return (
+return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      {/* ... existing header with home button ... */}
-
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
           <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -1352,14 +1357,7 @@ case 'roomTagging':
           {questions[currentStep].type !== 'pricingReview' && (
             <button
               type="button"
-              onClick={() => {
-                if (isCurrentStepValid()) {
-                  setCurrentStep(prev => prev + 1);
-                  setShowValidation(false);
-                } else {
-                  setShowValidation(true);
-                }
-              }}
+              onClick={handleNext} // Use handleNext instead of inline function
               disabled={!isCurrentStepValid()}
               className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
             >

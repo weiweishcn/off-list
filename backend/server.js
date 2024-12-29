@@ -23,10 +23,10 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 app.use((req, res, next) => {
-  console.log('Incoming request:', {
-    path: req.path,
-    acceptEncoding: req.headers['accept-encoding']
-  });
+  console.log('\n--- New Request ---');
+  console.log('Request path:', req.path);
+  console.log('Request method:', req.method);
+  console.log('Request headers:', req.headers);
   next();
 });
 
@@ -227,51 +227,85 @@ app.post('/api/projects/initialize', async (req, res) => {
   }
 });
 
-// Modify file upload configurations to use project folder
 const imageUpload = multer({
   storage: multerS3({
     s3: s3,
     bucket: 'designimages',
     acl: 'public-read',
     key: function (req, file, cb) {
+      console.log('\n--- Multer S3 Key Function ---');
+      console.log('File:', file);
+      console.log('request body: ', req.body);
+      
       const projectFolder = req.body.projectFolder;
+      const uploadType = req.body.uploadType;
+      const roomType = req.body.roomType;
+      const roomId = req.body.roomId;
+      console.log('Extracted values:', {
+        projectFolder,
+        uploadType,
+        roomType,
+        roomId
+      });
+      
       if (!projectFolder) {
+        console.error('Project folder missing in key function');
         return cb(new Error('Project folder not specified'));
       }
+
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const fileExtension = path.extname(file.originalname) || '';
-      cb(null, `${projectFolder}/${file.fieldname}-${uniqueSuffix}${fileExtension}`);
-    }
-  }),
-  limits: {
-    fileSize: 100 * 1024 * 1024,
-    files: 10
-  }
-});
+      
+      let prefix = '';
+      if (uploadType === 'existing') {
+        prefix = `room-${roomId}-${roomType}-existing`;
+      } else if (uploadType === 'inspiration') {
+        prefix = `room-${roomId}-${roomType}-inspiration`;
+      } else {
+        prefix = 'photo';
+      }
 
-// Modify upload endpoints to require project folder
+      const key = `${projectFolder}/${prefix}-${uniqueSuffix}${fileExtension}`;
+      console.log('Generated S3 key:', key);
+      cb(null, key);
+    },
+    contentType: multerS3.AUTO_CONTENT_TYPE
+  })
+}).array('uploadFiles', 10);
+
 app.post('/api/upload', (req, res) => {
-  if (!req.body.projectFolder) {
-    return res.status(400).json({
-      error: { msg: 'Project folder not specified' }
-    });
-  }
-
+  // Run multer first
   imageUpload(req, res, function(err) {
+    console.log('\n--- Upload Request Start ---');
+    console.log('Processed body:', req.body);
+    console.log('Project folder:', req.body.projectFolder);
+    console.log('Files:', req.files);
+
     if (err) {
-      console.error('Upload error:', err);
+      console.error('Multer error:', err);
       return res.status(500).json({
         error: { msg: `Upload error: ${err.message}` }
       });
     }
 
+    // Now check for project folder after multer has processed the request
+    if (!req.body.projectFolder) {
+      console.log('Error: Missing project folder');
+      return res.status(400).json({
+        error: { msg: 'Project folder not specified' }
+      });
+    }
+
     if (!req.files || req.files.length === 0) {
+      console.log('Error: No files in request');
       return res.status(400).json({
         error: { msg: 'No files uploaded' }
       });
     }
 
     const imageUrls = req.files.map(file => file.location);
+    console.log('Successfully processed files:', imageUrls);
+    
     res.status(200).json({ imageUrls });
   });
 });
@@ -399,7 +433,6 @@ app.post('/api/upload-floor-plan', (req, res) => {
   });
 });
 
-// In your server.js
 const taggedFloorPlanUpload = multer({
   storage: multerS3({
     s3: s3,
@@ -407,40 +440,49 @@ const taggedFloorPlanUpload = multer({
     acl: 'public-read',
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: function (req, file, cb) {
+      console.log('Tagged floor plan upload request:', {
+        body: req.body,
+        file: file,
+        projectFolder: req.body.projectFolder
+      });
+
+      const projectFolder = req.body.projectFolder;
+      if (!projectFolder) {
+        console.error('Project folder missing in key function');
+        return cb(new Error('Project folder not specified'));
+      }
+
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, `tagged-floor-plan-${uniqueSuffix}.png`);
-    },
-    metadata: function (req, file, cb) {
-      cb(null, { fieldName: file.fieldname });
+      const key = `${projectFolder}/tagged-floor-plan-${uniqueSuffix}.png`;
+      console.log('Generated S3 key:', key);
+      cb(null, key);
     }
-  }),
-  limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limit for tagged floor plans
-  }
-}).array('uploadFiles', 1);
+  })
+}).single('uploadFiles');  // Changed from array to single
 
 app.post('/api/upload-tagged-floor-plan', (req, res) => {
+  console.log('Received tagged floor plan upload request', {
+    body: req.body,
+    files: req.files
+  });
+
   taggedFloorPlanUpload(req, res, function(err) {
     if (err) {
       console.error('Upload error:', err);
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({
-          error: { msg: 'File too large. Maximum size is 100MB' }
-        });
-      }
       return res.status(500).json({
         error: { msg: `Upload error: ${err.message}` }
       });
     }
 
-    if (!req.files || req.files.length === 0) {
+    if (!req.file) {
       return res.status(400).json({
-        error: { msg: 'No files uploaded' }
+        error: { msg: 'No file uploaded' }
       });
     }
 
-    const imageUrls = req.files.map(file => file.location);
-    res.json({ imageUrls });
+    const imageUrl = req.file.location;
+    console.log('Successfully uploaded tagged floor plan:', imageUrl);
+    res.json({ imageUrls: [imageUrl] });
   });
 });
 
@@ -612,6 +654,12 @@ app.get('/dashboard', (req, res) => {
 
 // Upload endpoints
 app.post('/api/upload', (req, res) => {
+  console.log("request body" + red.body.projectFolder);
+    if (!req.body.projectFolder) {
+    return res.status(400).json({
+      error: { msg: 'Project folder not specified' }
+    });
+  }
   imageUpload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       console.error('Multer error:', err);

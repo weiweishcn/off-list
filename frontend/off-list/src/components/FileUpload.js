@@ -1,7 +1,7 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 
-const FileUpload = ({ onUploadComplete, accept, uploadType, projectFolder }) => {
+const FileUpload = ({ onUploadComplete, accept, uploadType, projectFolder, roomType, roomId }) => {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [uploadedUrls, setUploadedUrls] = useState([]);
@@ -72,6 +72,12 @@ const onSubmit = async e => {
     formData.append("projectFolder", projectFolder);
     console.log('Adding project folder to form data:', projectFolder);
   }
+    if (roomType) {
+      formData.append("roomType", roomType);
+    }
+    if (roomId) {
+      formData.append("roomId", roomId);
+    }
   
   // Append each file along with its content type
   files.forEach((file, index) => {
