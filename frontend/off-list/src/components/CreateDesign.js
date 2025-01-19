@@ -1,10 +1,11 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FileUpload from './FileUpload';
 import axios from 'axios';
 import RoomTagger from './RoomTagger';
 import RoomDetailsForm from './RoomDetailsForm';
 import emailjs from '@emailjs/browser';
+import { useTranslation } from 'react-i18next';
 import { calculateTotalPrice } from './PricingCalculator';
 import { loadStripe } from '@stripe/stripe-js';
 import ReactPdfViewer from './PdfViewer';
@@ -12,69 +13,75 @@ import ReactPdfViewer from './PdfViewer';
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
 
 const RoomForm = ({ room, onUpdate, onRemove }) => {
+  const { t } = useTranslation();
   return (
     <div className="p-4 border rounded-lg mb-4 bg-white shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Room Details</h3>
+        <h3 className="text-lg font-medium">{t('createDesign.roomForm.title')}</h3>
         <button
           onClick={onRemove}
           className="text-red-600 hover:text-red-800"
         >
-          Remove Room
+          {t('createDesign.roomForm.removeRoom')}
         </button>
       </div>
       
       <div className="grid gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Room Type</label>
+          <label className="block text-sm font-medium mb-1">
+            {t('createDesign.steps.roomDetails.dimensions.title')}
+          </label>
           <input
             type="text"
             value={room.type}
             onChange={(e) => onUpdate({ ...room, type: e.target.value })}
-            placeholder="e.g., Kitchen, Living Room, Bathroom"
             className="w-full p-2 border rounded-md"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Square Footage</label>
+          <label className="block text-sm font-medium mb-1">
+            {t('createDesign.steps.roomDetails.dimensions.squareFootage')}
+          </label>
           <input
             type="number"
             value={room.squareFootage}
             onChange={(e) => onUpdate({ ...room, squareFootage: e.target.value })}
-            placeholder="Enter square footage"
             className="w-full p-2 border rounded-md"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Length (ft)</label>
+            <label className="block text-sm font-medium mb-1">
+              {t('createDesign.steps.roomDetails.dimensions.length')}
+            </label>
             <input
               type="number"
               value={room.length}
               onChange={(e) => onUpdate({ ...room, length: e.target.value })}
-              placeholder="Length"
               className="w-full p-2 border rounded-md"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Width (ft)</label>
+            <label className="block text-sm font-medium mb-1">
+              {t('createDesign.steps.roomDetails.dimensions.width')}
+            </label>
             <input
               type="number"
               value={room.width}
               onChange={(e) => onUpdate({ ...room, width: e.target.value })}
-              placeholder="Width"
               className="w-full p-2 border rounded-md"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Height (ft)</label>
+            <label className="block text-sm font-medium mb-1">
+              {t('createDesign.steps.roomDetails.dimensions.height')}
+            </label>
             <input
               type="number"
               value={room.height}
               onChange={(e) => onUpdate({ ...room, height: e.target.value })}
-              placeholder="Height"
               className="w-full p-2 border rounded-md"
             />
           </div>
@@ -84,20 +91,57 @@ const RoomForm = ({ room, onUpdate, onRemove }) => {
   );
 };
 
-const CreateDesign = () => {
-  
-  // Add presetRoomTypes here, at the top level
-  const presetRoomTypes = [
-    { id: 'bedroom', type: 'Bedroom', label: 'Bedroom' },
-    { id: 'master-bedroom', type: 'Master Bedroom', label: 'Master Bedroom' },
-    { id: 'bathroom', type: 'Bathroom', label: 'Bathroom' },
-    { id: 'kitchen', type: 'Kitchen', label: 'Kitchen' },
-    { id: 'living-room', type: 'Living Room', label: 'Living Room' },
-    { id: 'dining-room', type: 'Dining Room', label: 'Dining Room' },
-    { id: 'office', type: 'Office', label: 'Office' },
-    { id: 'laundry', type: 'Laundry Room', label: 'Laundry Room' }
-  ];
 
+// Define this outside the component, at the top of the file
+const useAutoSave = (projectId, currentStep, formData) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+
+  const saveProgress = useCallback(async () => {
+    if (!projectId || isSaving) return;
+
+    try {
+      setIsSaving(true);
+      const token = localStorage.getItem('token');
+      
+      await axios.put(
+        `${process.env.REACT_APP_API_URL}/api/projects/${projectId}/progress`,
+        {
+          currentStep,
+          ...formData,
+          status: 'draft'
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [projectId, currentStep, formData, isSaving]);
+
+  // Auto-save when form data changes
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      saveProgress();
+    }, 3000);
+
+    return () => clearTimeout(debounceTimer);
+  }, [saveProgress]);
+
+  return { isSaving, lastSaved, saveProgress };
+};
+
+const CreateDesign = () => {
+  const { t } = useTranslation();
+  
   // Your existing state declarations
   const form = useRef();
   const roomTaggerRef = useRef(null); // Add this ref at component level
@@ -127,6 +171,38 @@ const CreateDesign = () => {
   // Add these new state variables to CreateDesign component
 const [projectId, setProjectId] = useState(null);
 const [projectFolder, setProjectFolder] = useState(null);
+
+  const formData = {
+    designType,
+    hasExistingFloorPlan,
+    floorPlanUrls,
+    taggedRooms,
+    roomDetails
+  };
+
+
+  const { isSaving, lastSaved, saveProgress } = useAutoSave(projectId, currentStep, formData);
+
+
+// Add this function to load saved progress
+const loadSavedProgress = async (projectId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `${process.env.REACT_APP_API_URL}/api/projects/${projectId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error loading saved progress:', error);
+    return null;
+  }
+};
 
   const handleTaggedFloorPlanNext = async () => {
     try {
@@ -188,45 +264,6 @@ useEffect(() => {
   initializeProject();
 }, []);
 
-// Add function to save progress
-const saveProgress = async () => {
-  if (!projectId) return;
-
-  try {
-    const token = localStorage.getItem('token');
-    await axios.put(
-      `${process.env.REACT_APP_API_URL}/api/projects/${projectId}`,
-      {
-        designType,
-        rooms: taggedRooms.map(room => ({
-          ...room,
-          details: roomDetails[room.id]
-        })),
-        hasFloorPlan: hasExistingFloorPlan,
-        floorPlanUrls,
-        status: 'draft'
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    setShowError({
-      show: true,
-      message: 'Progress saved successfully'
-    });
-
-  } catch (error) {
-    console.error('Error saving progress:', error);
-    setShowError({
-      show: true,
-      message: 'Failed to save progress'
-    });
-  }
-};
 
 // Modify FileUpload usage to include project folder
 <FileUpload
@@ -322,48 +359,44 @@ const saveProgress = async () => {
     }
   };
 
-const questions = [
-  {
-    label: "What type of design service do you need?",
-    type: 'designType',
-    description: "Choose between virtual staging or remodeling design"
-  },
-  {
-    label: "Do you have an existing floor plan?",
-    type: 'floorPlanChoice',
-    description: "Let us know if you have a floor plan we can reference"
-  },
-  {
-    label: "Upload your floor plan",
-    type: 'floorPlanUpload',
-    description: "Upload your floor plan (PDF or image)",
-    show: hasExistingFloorPlan === true
-  },
-  {
-    label: "Tag rooms on your floor plan",
-    type: 'roomTagging',
-    description: "Click on your floor plan to mark each room location",
-    show: hasExistingFloorPlan === true && floorPlanUrls.length > 0
-  },
-  {
-    label: "Room Details",
-    type: 'roomDetails',
-    description: "Provide specific details for each room you want to design"
-  },
-  {
-    label: "Review Design Pricing",
-    type: 'pricingReview',
-    description: "Review the estimated cost for your design project"
-  },
+  const questions = [
     {
-    label: "Review Design Pricing",
-    type: 'pricingReview',
-    description: "Review the estimated cost for your design project"
-  }
-].filter(q => {
-  // If show property exists, use it for filtering, otherwise show the question
-  return q.hasOwnProperty('show') ? q.show : true;
-});
+      label: t('createDesign.steps.designType.title'),
+      type: 'designType',
+      description: t('createDesign.steps.designType.description')
+    },
+    {
+      label: t('createDesign.steps.floorPlan.title'),
+      type: 'floorPlanChoice',
+      description: t('createDesign.steps.floorPlan.description')
+    },
+    {
+      label: t('roomForm.upload.current'),
+      type: 'floorPlanUpload',
+      description: t('roomForm.upload.currentDesc'),
+      show: hasExistingFloorPlan === true
+    },
+    {
+      label: t('navigation.progress', { current: 3, total: 5 }),
+      type: 'roomTagging',
+      description: t('createDesign.steps.roomDetails.description'),
+      show: hasExistingFloorPlan === true && floorPlanUrls.length > 0
+    },
+    {
+      label: t('createDesign.steps.roomDetails.title'),
+      type: 'roomDetails',
+      description: t('createDesign.steps.roomDetails.description')
+    },
+    {
+      label: t('createDesign.steps.pricing.title'),
+      type: 'pricingReview',
+      description: t('createDesign.steps.pricing.description')
+    }
+  ].filter(q => {
+    // If show property exists, use it for filtering, otherwise show the question
+    return q.hasOwnProperty('show') ? q.show : true;
+  });
+
 
   const handleAddRoom = () => {
     setRooms([
@@ -1286,40 +1319,119 @@ case 'roomDetails':
           </div>
         );
 
-case 'roomTagging':
-  const currentFloorPlanUrl = floorPlanUrls[0];
-  
-  let content;
-  if (!currentFloorPlanUrl) {
-    content = (
-      <p className="text-red-600">No floor plan found. Please go back and upload a floor plan.</p>
-    );
-  } else {
-    content = (
-      <div className="bg-white rounded-lg shadow-sm">
-        <RoomTagger
-          ref={roomTaggerRef}
-          floorPlanUrl={currentFloorPlanUrl}
-          rooms={presetRoomTypes}
-          onTagsUpdate={(newTags) => {
-            setTaggedRooms(newTags);
-            console.log('Tags updated:', newTags);
-          }}
-          isPreviewMode={false}
-          initialTags={taggedRooms}
-          projectFolder={projectFolder}
-        />
-      </div>
-    );
-  }
+      case 'roomTagging':
+        const currentFloorPlanUrl = floorPlanUrls[0];
+        
+        if (!currentFloorPlanUrl) {
+          return (
+            <p className="text-red-600">{t('createDesign.steps.roomTagging.noFloorPlan')}</p>
+          );
+        }
 
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-      {content}
-    </div>
-  );
+        // Define room types with translations
+        const roomTypes = [
+          { 
+            id: 'bedroom',
+            type: 'bedroom',
+            label: t('createDesign.roomTypes.bedroom'),
+            buttonText: t('createDesign.roomTypes.bedroom'),
+            displayText: t('createDesign.roomTypes.bedroom'),
+            multiple: true 
+          },
+          { 
+            id: 'masterBedroom',
+            type: 'masterBedroom',
+            label: t('createDesign.roomTypes.masterBedroom'),
+            buttonText: t('createDesign.roomTypes.masterBedroom'),
+            displayText: t('createDesign.roomTypes.masterBedroom'),
+            multiple: false 
+          },
+          { 
+            id: 'bathroom',
+            type: 'bathroom',
+            label: t('createDesign.roomTypes.bathroom'),
+            buttonText: t('createDesign.roomTypes.bathroom'),
+            displayText: t('createDesign.roomTypes.bathroom'),
+            multiple: true 
+          },
+          { 
+            id: 'kitchen',
+            type: 'kitchen',
+            label: t('createDesign.roomTypes.kitchen'),
+            buttonText: t('createDesign.roomTypes.kitchen'),
+            displayText: t('createDesign.roomTypes.kitchen'),
+            multiple: false 
+          },
+          { 
+            id: 'livingRoom',
+            type: 'livingRoom',
+            label: t('createDesign.roomTypes.livingRoom'),
+            buttonText: t('createDesign.roomTypes.livingRoom'),
+            displayText: t('createDesign.roomTypes.livingRoom'),
+            multiple: false 
+          },
+          { 
+            id: 'diningRoom',
+            type: 'diningRoom',
+            label: t('createDesign.roomTypes.diningRoom'),
+            buttonText: t('createDesign.roomTypes.diningRoom'),
+            displayText: t('createDesign.roomTypes.diningRoom'),
+            multiple: false 
+          },
+          { 
+            id: 'office',
+            type: 'office',
+            label: t('createDesign.roomTypes.office'),
+            buttonText: t('createDesign.roomTypes.office'),
+            displayText: t('createDesign.roomTypes.office'),
+            multiple: true 
+          },
+          { 
+            id: 'laundry',
+            type: 'laundry',
+            label: t('createDesign.roomTypes.laundry'),
+            buttonText: t('createDesign.roomTypes.laundry'),
+            displayText: t('createDesign.roomTypes.laundry'),
+            multiple: false 
+          }
+        ];
+
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-2">
+              {t('createDesign.steps.roomTagging.title')}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {t('createDesign.steps.roomTagging.description')}
+            </p>
+            <div className="bg-white rounded-lg shadow-sm">
+              <RoomTagger
+                ref={roomTaggerRef}
+                floorPlanUrl={currentFloorPlanUrl}
+                rooms={roomTypes}
+                onTagsUpdate={(newTags) => {
+                  setTaggedRooms(newTags);
+                }}
+                isPreviewMode={false}
+                initialTags={taggedRooms}
+                projectFolder={projectFolder}
+                translations={{
+                  title: t('createDesign.steps.roomTagging.title'),
+                  description: t('createDesign.steps.roomTagging.description'),
+                  noFloorPlan: t('createDesign.steps.roomTagging.noFloorPlan'),
+                  roomTypes: roomTypes.reduce((acc, type) => ({
+                    ...acc,
+                    [type.id]: type.buttonText
+                  }), {})
+                }}
+                displayNames={roomTypes.reduce((acc, type) => ({
+                  ...acc,
+                  [type.id]: type.displayText
+                }), {})}
+              />
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -1327,23 +1439,39 @@ case 'roomTagging':
 
   // ... rest of the component (navigation, dialogs, etc.) remains similar
 
-return (
+  return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
+        {/* Save indicator */}
+        <div className="fixed bottom-4 right-4 flex items-center gap-2 text-sm bg-white px-4 py-2 rounded-lg shadow">
+          {isSaving ? (
+            <span className="text-gray-600">{t('createDesign.navigation.saving')}</span>
+          ) : lastSaved && (
+            <span className="text-gray-600">
+              {t('createDesign.navigation.lastSaved', { time: new Date(lastSaved).toLocaleTimeString() })}
+            </span>
+          )}
+        </div>
+
+        {/* Progress bar */}
         <div className="mb-8">
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-in-out"
               style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
-            ></div>
+            />
           </div>
           <p className="text-sm text-gray-600 mt-2 text-center">
-            Step {currentStep + 1} of {questions.length}
+            {t('createDesign.navigation.progress', { 
+              current: currentStep + 1, 
+              total: questions.length 
+            })}
           </p>
         </div>
 
         {renderCurrentStep()}
 
+        {/* Navigation buttons */}
         <div className="flex justify-between mt-8">
           {currentStep > 0 && (
             <button
@@ -1351,17 +1479,17 @@ return (
               onClick={() => setCurrentStep(prev => prev - 1)}
               className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
-              Back
+              {t('createDesign.navigation.back')}
             </button>
           )}
           {questions[currentStep].type !== 'pricingReview' && (
             <button
               type="button"
-              onClick={handleNext} // Use handleNext instead of inline function
+              onClick={handleNext}
               disabled={!isCurrentStepValid()}
               className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
             >
-              Next
+              {t('createDesign.navigation.next')}
             </button>
           )}
         </div>

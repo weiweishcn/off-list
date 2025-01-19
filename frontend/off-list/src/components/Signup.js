@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Signup = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -29,22 +31,22 @@ const Signup = () => {
 
   const validateForm = () => {
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+      setError(t('signup.validation.emailInvalid'));
       return false;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('signup.validation.passwordMismatch'));
       return false;
     }
     
     if (activationKey !== 'rondo1121') {
-      setError('Invalid activation key');
+      setError(t('signup.validation.invalidKey'));
       return false;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError(t('signup.validation.passwordLength'));
       return false;
     }
 
@@ -67,7 +69,7 @@ const Signup = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: email, // Keep username in request for backend compatibility
+          username: email,
           password
         }),
       });
@@ -79,11 +81,11 @@ const Signup = () => {
         localStorage.setItem('username', email);
         navigate('/dashboard');
       } else {
-        setError(data.message || 'Registration failed. Please try again.');
+        setError(data.message || t('signup.error'));
       }
     } catch (error) {
       console.error('Signup error:', error);
-      setError('An error occurred during registration. Please try again.');
+      setError(t('signup.error'));
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +93,6 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col py-12 sm:px-6 lg:px-8">
-      {/* Back to Home Button */}
       <div className="fixed top-4 left-4">
         <button
           onClick={() => navigate('/')}
@@ -105,21 +106,21 @@ const Signup = () => {
           >
             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
           </svg>
-          Back to Home
+          {t('navigation.backToHome')}
         </button>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Create your account
+          {t('signup.title')}
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Or{' '}
+          {t('signup.orSignIn')}{' '}
           <button
             onClick={() => navigate('/login')}
             className="font-medium text-blue-600 hover:text-blue-500"
           >
-            sign in to your existing account
+            {t('signup.signInLink')}
           </button>
         </p>
       </div>
@@ -135,7 +136,7 @@ const Signup = () => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+                {t('signup.emailLabel')}
               </label>
               <div className="mt-1">
                 <input
@@ -152,7 +153,7 @@ const Signup = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                {t('signup.passwordLabel')}
               </label>
               <div className="mt-1">
                 <input
@@ -169,7 +170,7 @@ const Signup = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
+                {t('signup.confirmPasswordLabel')}
               </label>
               <div className="mt-1">
                 <input
@@ -186,7 +187,7 @@ const Signup = () => {
 
             <div>
               <label htmlFor="activationKey" className="block text-sm font-medium text-gray-700">
-                Activation Key
+                {t('signup.activationKeyLabel')}
               </label>
               <div className="mt-1">
                 <input
@@ -207,7 +208,7 @@ const Signup = () => {
                 disabled={isLoading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
               >
-                {isLoading ? 'Creating account...' : 'Create account'}
+                {isLoading ? t('signup.creatingAccount') : t('signup.createAccount')}
               </button>
             </div>
           </form>

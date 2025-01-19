@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './components/HomePage';
@@ -16,30 +16,56 @@ import DesignerDashboard from './components/DesignerDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import ProjectDetails from './components/ProjectDetails';
 import DesignerProjectDetails from './components/DesignerProjectDetails';
+import Navbar from './components/Navbar';
+
+// Import i18n configuration
+import './i18n/config';
+
+// Layout component to wrap routes that should have the navigation
+const Layout = ({ children }) => {
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  );
+};
+
+// Loading component for Suspense fallback
+const Loading = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-lg text-gray-600">Loading...</div>
+  </div>
+);
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/design/:id" element={<PropertyDetails />} />
-          <Route path="/designer/:id" element={<DesignerDetails />} />
-          <Route path="/design" element={<DesignList />} />
-          <Route path="/designer" element={<DesignerList />} />
-          <Route path="/contact" element={<ContactForm />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/designRequest" element={<CreateDesign />} />
-          <Route path="/dashboard" element={<DashBoard />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/contactus" element={<ContactUs />} />
-          <Route path="/designer-dashboard" element={<DesignerDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/project/:id" element={<ProjectDetails />} />
-          <Route path="/designer/projects/:id" element={<DesignerProjectDetails />} />
-        </Routes>
-      </div>
-    </Router>
+    <Suspense fallback={<Loading />}>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Routes that should have the navbar */}
+            <Route path="/" element={<Layout><HomePage /></Layout>} />
+            <Route path="/design/:id" element={<Layout><PropertyDetails /></Layout>} />
+            <Route path="/designer/:id" element={<Layout><DesignerDetails /></Layout>} />
+            <Route path="/design" element={<Layout><DesignList /></Layout>} />
+            <Route path="/designer" element={<Layout><DesignerList /></Layout>} />
+            <Route path="/contact" element={<Layout><ContactForm /></Layout>} />
+            <Route path="/contactus" element={<Layout><ContactUs /></Layout>} />
+            
+            {/* Routes that shouldn't have the navbar (like auth pages and dashboards) */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/designRequest" element={<CreateDesign />} />
+            <Route path="/dashboard" element={<DashBoard />} />
+            <Route path="/designer-dashboard" element={<DesignerDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/project/:id" element={<ProjectDetails />} />
+            <Route path="/designer/projects/:id" element={<DesignerProjectDetails />} />
+          </Routes>
+        </div>
+      </Router>
+    </Suspense>
   );
 }
 

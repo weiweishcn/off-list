@@ -486,6 +486,132 @@ app.post('/api/upload-tagged-floor-plan', (req, res) => {
   });
 });
 
+app.put('/api/projects/:projectId/progress', async (req, res) => {
+  const { projectId } = req.params;
+  const { 
+    currentStep,
+    designType, 
+    hasExistingFloorPlan,
+    floorPlanUrls,
+    taggedRooms,
+    roomDetails,
+    status
+  } = req.body;
+
+  console.log('Received tagged rooms:', JSON.stringify(taggedRooms, null, 2));
+  console.log('Room details:', JSON.stringify(roomDetails, null, 2));
+
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  let client;
+  try {
+    const decoded = jwt.verify(token, 'secret-key');
+    
+    // Get user id
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [decoded.username]
+    );
+    const userId = userResult.rows[0].id;
+
+    // Start transaction
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // Update project main details including floor plan URLs
+    await client.query(`
+      UPDATE projects 
+      SET 
+        design_type = $1,
+        has_floor_plan = $2,
+        current_step = $3,
+        status = $4,
+        floor_plan_url = $5,
+        tagged_floor_plan_url = $6,
+        last_modified_at = CURRENT_TIMESTAMP
+      WHERE id = $7 AND user_id = $8
+    `, [
+      designType, 
+      hasExistingFloorPlan, 
+      currentStep, 
+      status || 'draft',
+      floorPlanUrls?.[0] || null,
+      floorPlanUrls?.[1] || null,
+      projectId, 
+      userId
+    ]);
+
+    // Update rooms if provided
+    if (taggedRooms?.length > 0) {
+      console.log('Processing rooms...');
+      
+      // First, remove existing rooms for this project
+      await client.query('DELETE FROM project_rooms WHERE project_id = $1', [projectId]);
+
+      // Insert new rooms
+      for (const room of taggedRooms) {
+        console.log('Processing room:', {
+          id: room.id,
+          type: room.type,
+          details: roomDetails[room.id]
+        });
+
+        const details = roomDetails[room.id] || {};
+        const roomValues = [
+          projectId,
+          room.type || room.roomType,  // Try both possible property names
+          parseFloat(details.squareFootage) || null,
+          parseFloat(details.length) || null,
+          parseFloat(details.width) || null,
+          parseFloat(details.height) || null
+        ];
+
+        console.log('Room values for insert:', roomValues);
+
+        const roomResult = await client.query(`
+          INSERT INTO project_rooms 
+            (project_id, room_type, square_footage, length, width, height)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id
+        `, roomValues);
+
+        const roomId = roomResult.rows[0].id;
+
+        // Only insert preferences if we have style or description
+        if (details.style || details.description) {
+          await client.query(`
+            INSERT INTO room_design_preferences 
+              (room_id, style, description)
+            VALUES ($1, $2, $3)
+          `, [roomId, details.style || null, details.description || null]);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+
+    res.json({ 
+      success: true, 
+      message: 'Progress saved successfully',
+      lastSaved: new Date()
+    });
+
+  } catch (error) {
+    if (client) await client.query('ROLLBACK');
+    console.error('Error saving progress:', {
+      error,
+      taggedRooms: taggedRooms?.map(r => ({ id: r.id, type: r.type })),
+      roomDetails
+    });
+    res.status(500).json({
+      error: 'Failed to save progress',
+      details: error.message
+    });
+  } finally {
+    if (client) client.release();
+  }
+});
+
 // Modified /api/design endpoint with explicit compression handling
 app.get('/api/design', async function (req, res) {
   try {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tab } from '@headlessui/react';
+import { useTranslation } from 'react-i18next';
 import FloorPlanComments from './FloorPlanComments';
 import DesignComments from './DesignComments';
 import FinalDesignsSection from './FinalDesignsSection';
@@ -8,6 +9,7 @@ import FinalDesignsSection from './FinalDesignsSection';
 const DesignerProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadingFloorPlan, setUploadingFloorPlan] = useState(false);
@@ -106,19 +108,25 @@ const DesignerProjectDetails = () => {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        {t('designerProjectDetails.loading')}
+      </div>
+    );
   }
 
   if (!project) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Project not found</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {t('designerProjectDetails.notFound.title')}
+          </h2>
           <button
             onClick={() => navigate('/designer/dashboard')}
             className="text-blue-600 hover:text-blue-800"
           >
-            ← Back to Dashboard
+            {t('designerProjectDetails.navigation.backToDashboard')}
           </button>
         </div>
       </div>
@@ -134,23 +142,30 @@ const DesignerProjectDetails = () => {
             onClick={() => navigate('/designer/dashboard')}
             className="text-gray-600 hover:text-gray-900"
           >
-            ← Back to Dashboard
+            {t('designerProjectDetails.navigation.backToDashboard')}
           </button>
         </div>
 
         {/* Project Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-2">Project #{project.id}</h1>
+          <h1 className="text-2xl font-bold mb-2">
+            {t('designerProjectDetails.header.projectId', { id: project.id })}
+          </h1>
           <div className="flex items-center space-x-4 text-gray-600">
-            <p>Status: {project.status}</p>
-            <p>Client: {project.client_email}</p>
-            <p>Created: {new Date(project.created_at).toLocaleDateString()}</p>
+            <p>{t('designerProjectDetails.header.status')}{project.status}</p>
+            <p>{t('designerProjectDetails.header.client')}{project.client_email}</p>
+            <p>
+              {t('designerProjectDetails.header.created')}
+              {new Date(project.created_at).toLocaleDateString()}
+            </p>
           </div>
         </div>
 
         {/* Floor Plan Section with Comments */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Floor Plans</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {t('designerProjectDetails.floorPlans.title')}
+          </h2>
           
           <Tab.Group>
             <Tab.List className="flex space-x-4 border-b mb-6">
@@ -164,7 +179,7 @@ const DesignerProjectDetails = () => {
                     }`
                   }
                 >
-                  Original Floor Plan
+                  {t('designerProjectDetails.floorPlans.tabs.original')}
                 </Tab>
               )}
               {project.tagged_floor_plan_url && (
@@ -177,7 +192,7 @@ const DesignerProjectDetails = () => {
                     }`
                   }
                 >
-                  Tagged Floor Plan
+                  {t('designerProjectDetails.floorPlans.tabs.tagged')}
                 </Tab>
               )}
               <Tab
@@ -189,7 +204,7 @@ const DesignerProjectDetails = () => {
                   }`
                 }
               >
-                Designer Floor Plan
+                {t('designerProjectDetails.floorPlans.tabs.designer')}
               </Tab>
             </Tab.List>
             
@@ -221,7 +236,7 @@ const DesignerProjectDetails = () => {
                   
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700">
-                      Upload New Floor Plan
+                      {t('designerProjectDetails.floorPlans.upload.title')}
                     </label>
                     <input
                       type="file"
@@ -235,7 +250,11 @@ const DesignerProjectDetails = () => {
                         file:bg-blue-50 file:text-blue-700
                         hover:file:bg-blue-100"
                     />
-                    {uploadingFloorPlan && <p className="mt-2 text-sm text-gray-500">Uploading...</p>}
+                    {uploadingFloorPlan && (
+                      <p className="mt-2 text-sm text-gray-500">
+                        {t('designerProjectDetails.floorPlans.upload.uploading')}
+                      </p>
+                    )}
                   </div>
                 </div>
               </Tab.Panel>
@@ -252,21 +271,46 @@ const DesignerProjectDetails = () => {
               {/* Room Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Dimensions</h3>
+                  <h3 className="text-lg font-medium mb-2">
+                    {t('designerProjectDetails.rooms.dimensions.title')}
+                  </h3>
                   <div className="space-y-2 text-gray-600">
-                    <p>Square Footage: {room.square_footage} sq ft</p>
+                    <p>
+                      {t('designerProjectDetails.rooms.dimensions.squareFootage', { 
+                        value: room.square_footage 
+                      })}
+                    </p>
                     {room.length && room.width && (
-                      <p>Dimensions: {room.length}' × {room.width}'</p>
+                      <p>
+                        {t('designerProjectDetails.rooms.dimensions.dimensions', {
+                          length: room.length,
+                          width: room.width
+                        })}
+                      </p>
                     )}
-                    {room.height && <p>Height: {room.height}'</p>}
+                    {room.height && (
+                      <p>
+                        {t('designerProjectDetails.rooms.dimensions.height', {
+                          value: room.height
+                        })}
+                      </p>
+                    )}
                   </div>
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Design Preferences</h3>
+                  <h3 className="text-lg font-medium mb-2">
+                    {t('designerProjectDetails.rooms.designPreferences.title')}
+                  </h3>
                   <div className="space-y-2 text-gray-600">
-                    <p>Style: {room.design_preferences?.style}</p>
-                    <p>Description: {room.design_preferences?.description}</p>
+                    <p>
+                      {t('designerProjectDetails.rooms.designPreferences.style')}
+                      {room.design_preferences?.style}
+                    </p>
+                    <p>
+                      {t('designerProjectDetails.rooms.designPreferences.description')}
+                      {room.design_preferences?.description}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -275,7 +319,9 @@ const DesignerProjectDetails = () => {
               <div className="space-y-4">
                 {room.existing_photos?.length > 0 && room.existing_photos[0] && (
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Current Room Photos</h3>
+                    <h3 className="text-lg font-medium mb-2">
+                      {t('designerProjectDetails.rooms.photos.currentRoom.title')}
+                    </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {room.existing_photos.map((photo, photoIndex) => (
                         <img 
@@ -295,7 +341,9 @@ const DesignerProjectDetails = () => {
 
                 {room.inspiration_photos?.length > 0 && room.inspiration_photos[0] && (
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Inspiration Photos</h3>
+                    <h3 className="text-lg font-medium mb-2">
+                      {t('designerProjectDetails.rooms.photos.inspiration.title')}
+                    </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {room.inspiration_photos.map((photo, photoIndex) => (
                         <img 
@@ -318,13 +366,13 @@ const DesignerProjectDetails = () => {
         </div>
 
         {/* Final Designs Section */}
-            <FinalDesignsSection
-            projectId={project.id}
-            designs={project.final_designs}
-            isDesigner={true}
-            onUploadDesigns={handleFinalDesignsUpload}
-            uploadingDesigns={uploadingDesigns}
-            />
+        <FinalDesignsSection
+          projectId={project.id}
+          designs={project.final_designs}
+          isDesigner={true}
+          onUploadDesigns={handleFinalDesignsUpload}
+          uploadingDesigns={uploadingDesigns}
+        />
       </div>
     </div>
   );
