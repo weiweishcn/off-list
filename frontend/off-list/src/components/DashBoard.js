@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import StripeSubscription from './StripeSubscription';
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
   const [designRequests, setDesignRequests] = useState([]);
@@ -24,7 +26,7 @@ function Dashboard() {
       setUsername(storedUsername);
     }
 
-        // Fetch subscription status
+    // Fetch subscription status
     const checkSubscription = async () => {
       try {
         const response = await fetch('/api/subscription-status', {
@@ -41,68 +43,39 @@ function Dashboard() {
 
     checkSubscription();
 
-  const handleSubscriptionComplete = async (data) => {
-    setShowSubscriptionModal(false);
-    // Refresh subscription status
-    const response = await fetch('/api/subscription-status', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-    const newData = await response.json();
-    setSubscription(newData.subscription);
-  };
+    const fetchProjects = async () => {
+      try {
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${apiUrl}/api/projects`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    navigate('/');
-  };
-
-const fetchProjects = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-      console.log('Fetching from:', apiUrl); // Debug log
-
-      const response = await fetch(`${apiUrl}/api/projects`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        const projectsArray = Array.isArray(data) ? data : data.projects || [];
+
+        const formattedRequests = projectsArray.map(project => ({
+          id: project.id,
+          status: project.status || 'Pending',
+          type: project.rooms?.length > 0 ? project.rooms.map(r => r.type).join(', ') : 'N/A',
+          submittedDate: new Date(project.created_at).toLocaleDateString(),
+          designer: project.designer_id ? 'Assigned' : 'Not Assigned',
+          action: `/project/${project.id}`
+        }));
+
+        setDesignRequests(formattedRequests);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        setLoading(false);
       }
-
-      const data = await response.json();
-      console.log('Received data:', data); // Debug log
-
-      // Ensure data is an array before mapping
-      const projectsArray = Array.isArray(data) ? data : data.projects || [];
-
-      const formattedRequests = projectsArray.map(project => ({
-        id: project.id,
-        status: project.status || 'Pending',
-        type: project.rooms?.length > 0 ? project.rooms.map(r => r.type).join(', ') : 'N/A',
-        submittedDate: new Date(project.created_at).toLocaleDateString(),
-        designer: project.designer_id ? 'Assigned' : 'Not Assigned',
-        action: `/project/${project.id}`
-      }));
-
-      setDesignRequests(formattedRequests);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      setLoading(false);
-    }
-  };
+    };
     
     fetchProjects();
   }, [navigate]);
@@ -113,9 +86,8 @@ const fetchProjects = async () => {
     navigate('/');
   };
 
-    const handleSubscriptionComplete = async (data) => {
+  const handleSubscriptionComplete = async (data) => {
     setShowSubscriptionModal(false);
-    // Refresh subscription status
     const response = await fetch('/api/subscription-status', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -128,7 +100,7 @@ const fetchProjects = async () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('common.loading')}</div>
       </div>
     );
   }
@@ -140,13 +112,15 @@ const fetchProjects = async () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Welcome, {username}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {t('dashboard.welcome', { username })}
+              </h1>
             </div>
             <button
               onClick={handleLogout}
               className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              Log Out
+              {t('dashboard.actions.logout')}
             </button>
           </div>
         </div>
@@ -158,13 +132,12 @@ const fetchProjects = async () => {
         <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-semibold mb-2">Subscription Status</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('dashboard.subscription.title')}</h2>
               <p className="text-gray-600">
-                {subscription ? (
-                  `Active subscription: ${subscription.plan}`
-                ) : (
-                  'No active subscription'
-                )}
+                {subscription 
+                  ? t('dashboard.subscription.active', { plan: subscription.plan })
+                  : t('dashboard.subscription.noActive')
+                }
               </p>
             </div>
             {!subscription && (
@@ -172,11 +145,12 @@ const fetchProjects = async () => {
                 onClick={() => setShowSubscriptionModal(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
               >
-                Subscribe Now
+                {t('dashboard.subscription.subscribe')}
               </button>
             )}
           </div>
         </div>
+
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <div 
@@ -189,8 +163,8 @@ const fetchProjects = async () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Create Design Request (per room)</h2>
-              <p className="text-gray-600">Start a new design project by submitting your requirements</p>
+              <h2 className="text-xl font-semibold mb-2">{t('dashboard.createRequest.title')}</h2>
+              <p className="text-gray-600">{t('dashboard.createRequest.description')}</p>
             </div>
           </div>
 
@@ -204,8 +178,8 @@ const fetchProjects = async () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Contact Support</h2>
-              <p className="text-gray-600">Get help with your design projects or account</p>
+              <h2 className="text-xl font-semibold mb-2">{t('dashboard.support.title')}</h2>
+              <p className="text-gray-600">{t('dashboard.support.description')}</p>
             </div>
           </div>
         </div>
@@ -213,62 +187,74 @@ const fetchProjects = async () => {
         {/* Design Requests Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold">Your Design Requests</h2>
+            <h2 className="text-xl font-semibold">{t('dashboard.designRequests.title')}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-            <thead className="bg-gray-50">
+              <thead className="bg-gray-50">
                 <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rooms</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Floor Plan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboard.designRequests.table.projectId')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboard.designRequests.table.status')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboard.designRequests.table.rooms')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboard.designRequests.table.submitted')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboard.designRequests.table.lastUpdated')}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('dashboard.designRequests.table.actions')}
+                  </th>
                 </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+              </thead>
+              <tbody className="divide-y divide-gray-200">
                 {designRequests.length > 0 ? (
-                    designRequests.map((request) => (
+                  designRequests.map((request) => (
                     <tr key={request.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{request.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{request.id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            request.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                            request.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                            'bg-green-100 text-green-800'
+                          request.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                          'bg-green-100 text-green-800'
                         }`}>
-                            {request.status}
+                          {t(`dashboard.designRequests.status.${request.status.toLowerCase()}`)}
                         </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.type}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.submittedDate}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.designer}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.type}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.submittedDate}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.designer}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
                         <Link to={request.action} className="hover:text-blue-900">
-                            View Details
+                          {t('dashboard.actions.viewDetails')}
                         </Link>
-                        </td>
+                      </td>
                     </tr>
-                    ))
+                  ))
                 ) : (
-                    <tr>
+                  <tr>
                     <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                        No design requests found. Create your first one!
+                      {t('dashboard.designRequests.empty')}
                     </td>
-                    </tr>
+                  </tr>
                 )}
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
-                {/* Subscription Modal */}
+
+        {/* Subscription Modal */}
         {showSubscriptionModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Choose Your Plan</h2>
+                <h2 className="text-xl font-semibold">{t('dashboard.subscription.title')}</h2>
                 <button
                   onClick={() => setShowSubscriptionModal(false)}
                   className="text-gray-500 hover:text-gray-700"

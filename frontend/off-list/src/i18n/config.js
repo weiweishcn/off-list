@@ -18,6 +18,43 @@ const resources = {
         viewFloorPlan: 'View Floor Plan'
       },
 
+    dashboard: {
+        welcome: 'Welcome, {username}',
+        title: 'Designer Dashboard',
+        createRequest: {
+          title: 'Create Design Request (per room)',
+          description: 'Start a new design project by submitting your requirements'
+        },
+        support: {
+          title: 'Contact Support',
+          description: 'Get help with your design projects or account'
+        },
+        subscription: {
+          title: 'Subscription Status',
+          active: 'Active subscription: {plan}',
+          noActive: 'No active subscription',
+          subscribe: 'Subscribe Now'
+        },
+        designRequests: {
+          title: 'Your Design Requests',
+          empty: 'No design requests found. Create your first one!',
+          table: {
+            projectId: 'Project ID',
+            status: 'Status',
+            rooms: 'Rooms',
+            floorPlan: 'Floor Plan',
+            submitted: 'Submitted',
+            lastUpdated: 'Last Updated',
+            actions: 'Actions'
+          },
+          status: {
+            pending: 'Pending',
+            inProgress: 'In Progress',
+            completed: 'Completed'
+          }
+        },
+    },
+
         createDesign: {
     steps: {
          roomTagging: {
@@ -214,19 +251,6 @@ const resources = {
           passwordMismatch: 'Passwords do not match',
           invalidKey: 'Invalid activation key',
           passwordLength: 'Password must be at least 6 characters long'
-        }
-      },
-
-      // Dashboard Sections
-      dashboard: {
-        title: 'Designer Dashboard',
-        createRequest: {
-          title: 'Create Design Request',
-          description: 'Start a new design project by submitting your requirements'
-        },
-        support: {
-          title: 'Contact Support',
-          description: 'Get help with your design projects or account'
         }
       },
 
@@ -605,6 +629,47 @@ const resources = {
         support: {
           title: '联系支持',
           description: '获取设计项目或账户相关帮助'
+        }
+      },
+
+    dashboard: {
+        welcome: '欢迎，{username}',
+        title: '设计师控制台',
+        createRequest: {
+          title: '创建设计需求（每个房间）',
+          description: '提交您的需求开始新的设计项目'
+        },
+        support: {
+          title: '联系支持',
+          description: '获取设计项目或账户相关帮助'
+        },
+        subscription: {
+          title: '订阅状态',
+          active: '当前订阅：{plan}',
+          noActive: '没有活跃的订阅',
+          subscribe: '立即订购'
+        },
+        designRequests: {
+          title: '您的设计需求',
+          empty: '未找到设计需求。创建您的第一个需求！',
+          table: {
+            projectId: '项目编号',
+            status: '状态',
+            rooms: '房间',
+            floorPlan: '平面图',
+            submitted: '提交时间',
+            lastUpdated: '最后更新',
+            actions: '操作'
+          },
+          status: {
+            pending: '待处理',
+            inProgress: '进行中',
+            completed: '已完成'
+          }
+        },
+        actions: {
+          logout: '退出登录',
+          viewDetails: '查看详情'
         }
       },
 
