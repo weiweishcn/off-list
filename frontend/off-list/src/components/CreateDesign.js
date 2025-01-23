@@ -10,7 +10,7 @@ import { calculateTotalPrice } from './PricingCalculator';
 import { loadStripe } from '@stripe/stripe-js';
 import ReactPdfViewer from './PdfViewer';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || 'very_not_real_key');
 
 const RoomForm = ({ room, onUpdate, onRemove }) => {
   const { t } = useTranslation();
