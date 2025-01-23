@@ -17,8 +17,11 @@
     "@emailjs/browser": "^4.4.1",
     "@emailjs/nodejs": "^5.0.2",
     "@react-oauth/google": "^0.12.1",
+    "@stripe/react-stripe-js": "^3.0.0",
+    "@stripe/stripe-js": "^5.2.0",
     "aws-sdk": "^2.895.0",
     "bcrypt": "^5.1.1",
+    "compression": "^1.7.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
@@ -27,7 +30,8 @@
     "multer-s3": "^2.9.0",
     "multiparty": "^4.2.3",
     "pg": "^8.13.1",
-    "react-images-uploading": "^3.1.7"
+    "react-images-uploading": "^3.1.7",
+    "stripe": "^17.4.0"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
