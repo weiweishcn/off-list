@@ -14,6 +14,9 @@ const { env } = require('process');
 const designData = require('./DesignData');
 console.log('Loaded design data:', designData);
 const zlib = require('zlib');
+const { v4: uuidv4 } = require('uuid');
+const { createHash } = require('crypto');
+const { objPropertiesDefined } = require('./common');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -695,18 +698,56 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password } = req.body;
-  console.log(username, password);
+  const rb = req.body;
+
+  // Check request body
+  if(!objPropertiesDefined(rb, ['email', 'tel', 'type', 'lastName', 'firstName', 'pw']))
+    return res.status(400).json({ error: 'Signup fields are missing.' })
+
+  // Salt and Hash- do not do this after existence check, otherwise this code is vulnerable to timing attack
+  const salt = uuidv4();
+  const pwHash = createHash('sha256').update(rb.pw).update(salt).digest('hex');
+
+  // Check to see if email exists
   try {
-    const result = await pool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2)', [username, password]);
-    console.log('success');
-    const token = jwt.sign({ username: username }, 'secret-key');
-    res.send({ token });
-    console.log(token);
-  } catch (err) {
-    console.log(err.message);
-    res.status(500).json({ error: err.message });
+    const exists = (await pool.query('SELECT * FROM users WHERE email = ($1)', [rb.email])).rows.length;
+
+    if(exists)
+      return res.status(409).json({ error: 'This email is already registered.' });
+  } catch(err) {
+    console.error(`Signup failed when checking pre-existing email: ${err.message}`);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
+
+  // Add to table
+  const insertQuery = `
+    INSERT INTO users (email, password_hash, phone, user_type, lastname, firstname, salt)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+  `;
+  const insertValues = [rb.email, pwHash, rb.tel, rb.type, rb.lastName, rb.firstName, salt];
+
+  try {
+    await pool.query(insertQuery, insertValues);
+  } catch(err) {
+    console.error(`Signup failed when inserting record: ${err.message}`);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+
+  return res.status(200).json({ result: 'Account creation successful.' });
+
+
+  // const { username, password } = req.body;
+  // console.log(username, password);
+  // try {
+  //   const result = await pool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2)', [username, password]);
+  //   console.log('success');
+  //   const token = jwt.sign({ username: username }, 'secret-key');
+  //   res.send({ token });
+  //   console.log(token);
+  // } catch (err) {
+  //   console.log(err.message);
+  //   res.status(500).json({ error: err.message });
+  // }
 });
 
 /*

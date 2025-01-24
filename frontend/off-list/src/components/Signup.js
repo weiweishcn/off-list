@@ -2,219 +2,239 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import * as Form from '@radix-ui/react-form';
+import { Button, RadioCards, TextField, Card, Flex, Text, Strong, ScrollArea } from '@radix-ui/themes';
+
+import AuthWindow from './AuthWindow';
+import { useMutation } from '@tanstack/react-query';
+
+const userRoles = ['Realtor', 'Designer', 'Brokerage', 'General Contractor', 'Supplier', 'Other'];
+const NO_USER_ROLE = '';
+
 const Signup = () => {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    activationKey: ''
-  });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentRole, setCurrentRole] = useState(NO_USER_ROLE);
+  const [pageIndex, setPageIndex] = useState(0);
+
   const navigate = useNavigate();
 
-  const { email, password, confirmPassword, activationKey } = formData;
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    setError('');
-  };
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validateForm = () => {
-    if (!validateEmail(email)) {
-      setError(t('signup.validation.emailInvalid'));
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      setError(t('signup.validation.passwordMismatch'));
-      return false;
-    }
-    
-    if (activationKey !== 'rondo1121') {
-      setError(t('signup.validation.invalidKey'));
-      return false;
-    }
-
-    if (password.length < 6) {
-      setError(t('signup.validation.passwordLength'));
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
-      const response = await fetch(`${apiUrl}/api/signup`, {
+  const signUpMutation = useMutation({
+    mutationFn: async (signUpData) => {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: email,
-          password
-        }),
+        body: JSON.stringify(signUpData)
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('username', email);
-        navigate('/dashboard');
-      } else {
-        setError(data.message || t('signup.error'));
+      if(!response.ok) {
+        const json = await response.json();
+        console.log(json);
+        throw new Error(json.error);
       }
-    } catch (error) {
-      console.error('Signup error:', error);
-      setError(t('signup.error'));
-    } finally {
-      setIsLoading(false);
-    }
+
+      return response.json();
+    },
+    onSuccess: () => { setPageIndex(2); }
+  });
+
+  const onRoleChange = (value) => {
+    setCurrentRole(value);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col py-12 sm:px-6 lg:px-8">
-      <div className="fixed top-4 left-4">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center px-4 py-2 text-gray-700 bg-white rounded-lg shadow hover:bg-gray-50 transition-colors"
+  const prepareFormData = (formData) => {
+    let data = Object.fromEntries(formData);
+    data.type = currentRole;
+    delete data.emailConf;
+    delete data.pwConf;
+    
+    return data;
+  }
+
+  const submitForm = (e) => {
+    e.preventDefault();
+
+    const data = prepareFormData(new FormData(e.currentTarget));
+    signUpMutation.mutate(data);
+  }
+
+  // Elements clicked on when choosing designer/contractor/realtor/etc.
+  const roleUiElements = userRoles.map((roleName) => {
+    return (
+      <RadioCards.Item
+        className='SignupToggleItem'
+        value={roleName}
+        aria-label={roleName}
+      >
+        <Text> {roleName} </Text>
+      </RadioCards.Item>
+    );
+  });
+
+  const advanceButton = (inForm) => {
+    return (
+      <div className='ml-1'>
+        {
+          inForm ?
+          <Form.Submit asChild>
+            <Button loading={ signUpMutation.isPending }> <Text> Submit </Text> </Button>
+          </Form.Submit>
+          :
+          <Button
+            onClick={ () => setPageIndex(pageIndex + 1) }
+            disabled={ currentRole === NO_USER_ROLE }
+          >
+            <Text> Next </Text>
+          </Button>
+        }
+      </div>
+    );
+  };
+
+  const roleSelector = (roles) => {
+    return (
+      <Flex
+        direction='column'
+        gap='20px'
+        justify='center'
+        height='100%'
+      >
+        <Strong> Select your occupation </Strong>
+
+        <RadioCards.Root
+          defaultValue={currentRole}
+          onValueChange={onRoleChange}
+          aria-lable='Role selection'
         >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5 mr-2" 
-            viewBox="0 0 20 20" 
-            fill="currentColor"
-          >
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-          </svg>
-          {t('navigation.backToHome')}
-        </button>
-      </div>
+          { roles }
+        </RadioCards.Root>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {t('signup.title')}
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          {t('signup.orSignIn')}{' '}
-          <button
-            onClick={() => navigate('/login')}
-            className="font-medium text-blue-600 hover:text-blue-500"
-          >
-            {t('signup.signInLink')}
-          </button>
-        </p>
-      </div>
+        { advanceButton(false) }
+      </Flex>
+    );
+  }
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
+  /*
+    type is a standard <input> type: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                {t('signup.emailLabel')}
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+    text is a plaintext name or label
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                {t('signup.passwordLabel')}
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+    fieldName is the corresponding data state field name
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                {t('signup.confirmPasswordLabel')}
-              </label>
-              <div className="mt-1">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+    extraMatches is an array of objs as such:
+    [
+      { message: String, match: (value, FormData) => bool }, { ... }, ...
+    ]
+  */
+  const buildFormField = (type, text, fieldName, extraMatches, required=true) => {
+    const lowerText = text.toLowerCase();
+    const INVALID_COLOR = 'text-red-400';
+    let extraMessages = [];
 
-            <div>
-              <label htmlFor="activationKey" className="block text-sm font-medium text-gray-700">
-                {t('signup.activationKeyLabel')}
-              </label>
-              <div className="mt-1">
-                <input
-                  id="activationKey"
-                  name="activationKey"
-                  type="text"
-                  required
-                  value={activationKey}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+    if(extraMatches) {
+      extraMessages = extraMatches.map((el) => 
+        <Form.Message match={ el.match } className={ INVALID_COLOR }>
+          { el.message }
+        </Form.Message>
+      );
+    }
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
-              >
-                {isLoading ? t('signup.creatingAccount') : t('signup.createAccount')}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+    const missingMessage = required ? 
+      <Form.Message match="valueMissing" className={ INVALID_COLOR }>
+        <Text> This is a required field. </Text>
+      </Form.Message>
+    :
+    <></>;
+
+    return (
+      <Form.Field name={fieldName} className='flex flex-col items-start p-1'>
+        <Form.Control type={type} className='Input' required={ required } asChild>
+          <TextField.Root size='3' placeholder={ text } className='w-[99%]' />
+        </Form.Control>
+
+        <Form.Message match="typeMismatch" className={ INVALID_COLOR }>
+					<Text> Please provide a valid {lowerText}. </Text>
+				</Form.Message>
+
+        { missingMessage }
+        { extraMessages }
+      </Form.Field>
+    );
+  };
+
+
+  const contactForm = (
+    <Flex 
+      direction='column'
+      height='100%'
+      justify='center'
+    >
+      <Strong className='mb-4'> Enter your contact information: </Strong>
+
+      <Card>
+        <ScrollArea
+          height='100%'
+          // type='always'
+          scrollbars='vertical'
+        >
+          <Form.Root onSubmit={ submitForm } className='flex flex-col gap-2 h-[100%]'>
+            { buildFormField('tel', 'Phone Number', 'tel') }
+            { buildFormField('text', 'First Name', 'firstName') }
+            { buildFormField('text', 'Last Name (Optional)', 'lastName', [], false) }
+            { buildFormField('email', 'Email', 'email') }
+            { buildFormField('email', 'Confirm Email', 'emailConf', [{
+              message: "Emails don't match", 
+              match: (value, formData) => value !== Object.fromEntries(formData).email
+            }]) }
+            { buildFormField('password', 'Password', 'pw') }
+            { buildFormField('password', 'Confirm Password', 'pwConf', [{
+              message: "Passwords don't match", 
+              match: (value, formData) => value !== Object.fromEntries(formData).pw
+            }]) }
+            { advanceButton(true) }
+          </Form.Root>
+        </ScrollArea>
+      </Card>
+    </Flex>
+  );
+
+
+  const signupCompletePage = (
+    <Flex
+      direction='column'
+      gap='4'
+      justify='center'
+      align='center'
+      height='100%'
+    >
+      <Strong> Thank you for signing up. </Strong>
+
+      <Flex
+        gap='4'
+      >
+        <Button onClick={ () => navigate('/login') }> <Text> Login Here </Text> </Button>
+        <Button onClick={ () => navigate('/') }> <Text> Return Home </Text> </Button>
+      </Flex>
+    </Flex>
+  );
+
+  let pages = [
+    roleSelector(roleUiElements), contactForm, signupCompletePage
+  ]
+
+  return (
+    <AuthWindow
+      headerText='Create a Pencil Dogs Account'
+      onBackClick={ () => {
+        if([0, 2].includes(pageIndex))
+          navigate('/');
+        else
+          setPageIndex(pageIndex - 1);
+      } }
+      showErrorBar={ signUpMutation.isError && pageIndex === 1 }
+      errorMessage={ signUpMutation.error?.message }
+    >
+      {pages[pageIndex]}
+    </AuthWindow>
   );
 };
 
