@@ -1,101 +1,103 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import AuthWindow from './AuthWindow';
+import * as Form from '@radix-ui/react-form';
+import { TextField, Text, Button, Box } from '@radix-ui/themes';
+
+import { useMutation } from '@tanstack/react-query';
+
 
 const LoginPage = () => {
   const { t } = useTranslation();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log('API URL:', process.env.REACT_APP_API_URL);
-    
-    try {
-      const apiUrl = process.env.REACT_APP_API_URL;
-      const response = await fetch(`${apiUrl}/api/login`, {
+  const loginMutation = useMutation({
+    mutationFn: async (credentials) => {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          username,
-          password
-        })
+        body: JSON.stringify(credentials)
       });
 
-      if (!response.ok) {
-        throw new Error('Login failed');
+      if(!response.ok) {
+        const json = await response.json();
+        throw new Error(json.error);
       }
 
-      const data = await response.json();
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
       localStorage.setItem('token', data.token);
-      localStorage.setItem('username', username);
+      localStorage.setItem('username', variables.email);
       localStorage.setItem('userType', data.userType);
 
       switch (data.userType) {
-        case 'designer':
+        case 'Designer':
           navigate('/designer-dashboard');
           break;
-        case 'admin':
+        case 'Admin':
           navigate('/admin-dashboard');
           break;
         default:
           navigate('/dashboard');
           break;
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError(t('login.error'));
     }
-  };
+  });
+
+  const submitForm = (e) => {
+    e.preventDefault();
+
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    loginMutation.mutate(data);
+  }
+
+  const buildFormField = (type, text, fieldName) => {
+    const INVALID_COLOR = 'text-red-400';
+      
+    return (
+      <Form.Field name={fieldName} className='flex flex-col items-start'>
+        <Form.Control type={type} required asChild>
+          <TextField.Root size='3' placeholder={ text } className='w-full' />
+        </Form.Control>
+
+        <Form.Message match="valueMissing" className={ INVALID_COLOR }>
+          <Text> This is a required field. </Text>
+        </Form.Message>
+      </Form.Field>
+    );
+  }
+
+  const loginSection = () => {
+    return (
+      <Form.Root onSubmit={ submitForm } className='flex flex-col gap-2 h-[100%] justify-center'>
+        { buildFormField('text', 'Email', 'email') }
+        { buildFormField('password', 'Password', 'pw') }
+
+        <div>
+          <Form.Submit asChild>
+            <Button loading={ loginMutation.isPending }> <Text> Login </Text> </Button>
+          </Form.Submit>
+        </div>
+      </Form.Root>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow">
-        <h2 className="text-3xl font-bold text-center">{t('login.title')}</h2>
-        {error && (
-          <div className="p-4 text-red-700 bg-red-100 rounded">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
-              {t('login.emailLabel')}
-            </label>
-            <input 
-              type="email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-              required 
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
-              {t('login.passwordLabel')}
-            </label>
-            <input 
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <button 
-            type="submit"
-            className="w-full p-3 text-white bg-blue-600 rounded hover:bg-blue-700"
-          >
-            {t('login.submitButton')}
-          </button>
-        </form>
-      </div>
-    </div>
+    <AuthWindow
+      headerText='Login to Pencil Dogs'
+      onBackClick={ () => navigate('/') }
+      showErrorBar={ loginMutation.isError }
+      errorMessage={ loginMutation.error?.message }
+    >
+      <Box
+        height='100%'
+      >
+        { loginSection() }
+      </Box>
+    </AuthWindow>
   );
 };
 

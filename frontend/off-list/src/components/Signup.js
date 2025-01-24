@@ -64,6 +64,7 @@ const Signup = () => {
         className='SignupToggleItem'
         value={roleName}
         aria-label={roleName}
+        key={`roleElement${roleName}`}
       >
         <Text> {roleName} </Text>
       </RadioCards.Item>
@@ -97,13 +98,14 @@ const Signup = () => {
         gap='20px'
         justify='center'
         height='100%'
+        key='signupRoleSelector'
       >
         <Strong> Select your occupation </Strong>
 
         <RadioCards.Root
           defaultValue={currentRole}
           onValueChange={onRoleChange}
-          aria-lable='Role selection'
+          aria-label='Role selection'
         >
           { roles }
         </RadioCards.Root>
@@ -131,8 +133,8 @@ const Signup = () => {
     let extraMessages = [];
 
     if(extraMatches) {
-      extraMessages = extraMatches.map((el) => 
-        <Form.Message match={ el.match } className={ INVALID_COLOR }>
+      extraMessages = extraMatches.map((el, i) => 
+        <Form.Message match={ el.match } className={ INVALID_COLOR } key={`signupValidator${fieldName}:${i}`} >
           { el.message }
         </Form.Message>
       );
@@ -167,13 +169,13 @@ const Signup = () => {
       direction='column'
       height='100%'
       justify='center'
+      key='signupContactForm'
     >
       <Strong className='mb-4'> Enter your contact information: </Strong>
 
       <Card>
         <ScrollArea
           height='100%'
-          // type='always'
           scrollbars='vertical'
         >
           <Form.Root onSubmit={ submitForm } className='flex flex-col gap-2 h-[100%]'>
@@ -205,6 +207,7 @@ const Signup = () => {
       justify='center'
       align='center'
       height='100%'
+      key='signupComplete'
     >
       <Strong> Thank you for signing up. </Strong>
 
@@ -217,9 +220,7 @@ const Signup = () => {
     </Flex>
   );
 
-  let pages = [
-    roleSelector(roleUiElements), contactForm, signupCompletePage
-  ]
+  let pages = [ roleSelector(roleUiElements), contactForm, signupCompletePage ];
 
   return (
     <AuthWindow

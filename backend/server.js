@@ -662,37 +662,44 @@ app.get('/api/designer', function (req, res) {
 });
 
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  console.log('Login attempt:', { username, passwordLength: password?.length });
+  const { email, pw } = req.body;
   
+  let salt = uuidv4();
+  let expectedHash = createHash('sha256').update(uuidv4()).digest('hex');
+  let userType = '';
+
   try {
-    console.log('Executing query...');
-    const result = await pool.query(
-      'SELECT password_hash, user_type FROM users WHERE email = $1', 
-      [username]
-    );
-    console.log('Query result:', result.rows);
-    
-    if (result.rows.length > 0 && result.rows[0].password_hash === password) {
-      const token = jwt.sign({ 
-        username,
-        userType: result.rows[0].user_type 
-      }, 'secret-key');
-      
-      console.log('Login successful, sending token');
-      res.status(200).json({ 
-        token,
-        userType: result.rows[0].user_type
-      });
-    } else {
-      console.log('Invalid credentials - no match found');
-      res.status(401).json({ error: 'Invalid credentials' });
+    const result = await pool.query('SELECT salt, password_hash, user_type FROM users WHERE email = $1', [email]);
+    console.log(result.rows);
+
+    if(result.rows.length == 1) {
+      const data = result.rows[0];
+      salt = data.salt;
+      expectedHash = data.password_hash;
+      userType = data.user_type;
     }
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ 
-      error: 'Server error', 
-      details: err.message 
+  } catch(err) {
+    console.error('Login fail when fetching preliminary data');
+    return res.status(500).json({error: 'Internal server error.'})
+  }
+
+  // Hash- this computation must always occur to prevent timing attack
+  // Hence why the values above are initialized that way
+  const computedHash = createHash('sha256').update(pw).update(salt).digest('hex');
+
+  if(computedHash === expectedHash) {    
+    const token = jwt.sign({ 
+      username: email,
+      userType: userType
+    }, 'secret-key');
+
+    return res.status(200).json({
+      token: token,
+      userType: userType
+    });
+  } else {
+    return res.status(401).json({
+      error: 'Invalid login id or password.'
     });
   }
 });
@@ -704,7 +711,7 @@ app.post('/api/signup', async (req, res) => {
   if(!objPropertiesDefined(rb, ['email', 'tel', 'type', 'lastName', 'firstName', 'pw']))
     return res.status(400).json({ error: 'Signup fields are missing.' })
 
-  // Salt and Hash- do not do this after existence check, otherwise this code is vulnerable to timing attack
+  // Salt and Hash
   const salt = uuidv4();
   const pwHash = createHash('sha256').update(rb.pw).update(salt).digest('hex');
 
