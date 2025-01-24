@@ -16,6 +16,7 @@ console.log('Loaded design data:', designData);
 const zlib = require('zlib');
 const { v4: uuidv4 } = require('uuid');
 const { createHash } = require('crypto');
+const moment = require('moment');
 const { objPropertiesDefined } = require('./common');
 
 const app = express();
@@ -686,7 +687,13 @@ app.post('/api/login', async (req, res) => {
   // Hence why the values above are initialized that way
   const computedHash = createHash('sha256').update(pw).update(salt).digest('hex');
 
-  if(computedHash === expectedHash) {    
+  if(computedHash === expectedHash) {
+    try {
+      await pool.query('UPDATE users SET last_login = $1 WHERE email = $2', [moment().toISOString(), email]);
+    } catch(err) {
+      console.error('Failed to set last login timestamp');
+    }
+
     const token = jwt.sign({ 
       username: email,
       userType: userType
