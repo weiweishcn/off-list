@@ -741,20 +741,6 @@ app.post('/api/signup', async (req, res) => {
   }
 
   return res.status(200).json({ result: 'Account creation successful.' });
-
-
-  // const { username, password } = req.body;
-  // console.log(username, password);
-  // try {
-  //   const result = await pool.query('INSERT INTO users (email, password_hash) VALUES ($1, $2)', [username, password]);
-  //   console.log('success');
-  //   const token = jwt.sign({ username: username }, 'secret-key');
-  //   res.send({ token });
-  //   console.log(token);
-  // } catch (err) {
-  //   console.log(err.message);
-  //   res.status(500).json({ error: err.message });
-  // }
 });
 
 /*
