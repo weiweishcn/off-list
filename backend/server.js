@@ -670,7 +670,6 @@ app.post('/api/login', async (req, res) => {
 
   try {
     const result = await pool.query('SELECT salt, password_hash, user_type FROM users WHERE email = $1', [email]);
-    console.log(result.rows);
 
     if(result.rows.length == 1) {
       const data = result.rows[0];

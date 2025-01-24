@@ -76,7 +76,7 @@ function App() {
             </div>
           </QueryClientProvider>
 
-          <ThemePanel />
+          {/* <ThemePanel /> */}
         </Theme>
       </Router>
     </Suspense>
