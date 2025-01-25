@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { designerData } from '../data/designerData';
+import { designRoomData } from '../data/designRoomData';
 
 const DesignerDetailPage = () => {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ const DesignerDetailPage = () => {
       {/* Right side - Designer lists */}
       <div className="w-1/2 p-4 overflow-y-auto">
         <div className="grid gap-4">
-          {designerData.map((designer) => (
+          {designRoomData.map((designer) => (
             <div 
               key={designer.id} 
               className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
