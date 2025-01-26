@@ -1,92 +1,122 @@
 // src/components/Navbar.jsx
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
+import { Button, IconButton, Text, Dialog, Separator, Inset } from '@radix-ui/themes';
+import { Cross1Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 
 const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const buildNavLinks = (inDialog) => {
+    const styleProps = {
+      size: '3',
+      variant: 'ghost',
+      highContrast: true,
+    };
+
+    const buildButton = (nav, text, key) => {
+      const button = (
+        <Button
+          onClick={ () => navigate(nav) }
+          key={ key }
+          { ...styleProps }
+        >
+          <Text> { t(text) } </Text>
+        </Button>
+      );
+
+      return inDialog ? 
+        <Dialog.Close>
+          { button }
+        </Dialog.Close>
+      :
+        button
+      ;
+    };
+
+    const buttonList = [
+      ['/', 'Home'],
+      ['/login', 'navigation.login'],
+      ['/signup', 'navigation.signup'],
+      ['/contactus', 'navigation.contactUs']
+    ];
+    const buttons = buttonList.map(([nav, text], i) => buildButton(nav, text, `navButton${i}`));
+
+    return (
+      <>
+        { buttons }
+
+        { inDialog ? <Inset side='x'> <Separator orientation='horizontal' size='4'/> </Inset> : <></> }
+
+        <div className='flex justify-center'>
+          <LanguageSwitcher
+            { ...styleProps }
+          />
+        </div>
+      </>
+    );
+  };
+
+  const drawerButton = () => {
+    return (
+      <div
+        className='md:hidden flex'
+      >
+        <IconButton
+          size='4'
+          variant='ghost'
+        >
+          <HamburgerMenuIcon />
+        </IconButton>
+      </div>
+    );
+  };
 
   return (
     <nav className="relative z-10 p-4 lg:p-6">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center">
+        <Link to='/'>
           <img 
             src="/logo.png"
             alt="Pencil Dogs Logo" 
             className="h-10 w-auto md:h-12"
           />
+        </Link>
+
+        <div className='hidden md:flex gap-10'>
+          { buildNavLinks(false) }
         </div>
 
-        {/* Mobile Menu Button */}
-        <button 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden p-2 text-white"
-        >
-          <svg 
-            className="w-6 h-6" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            {isMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
+        <Dialog.Root>
+          <Dialog.Trigger>
+            { drawerButton() }
+          </Dialog.Trigger>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex space-x-4 items-center">
-          <button 
-            onClick={() => window.location.href='/login'}
-            className="px-6 py-2 text-white hover:bg-white hover:text-black transition-colors rounded-lg border border-white"
-          >
-            {t('navigation.login')}
-          </button>
-          <button 
-            onClick={() => window.location.href='/signup'}
-            className="px-6 py-2 bg-white text-black hover:bg-gray-200 transition-colors rounded-lg"
-          >
-            {t('navigation.signup')}
-          </button>
-          <button 
-            onClick={() => window.location.href='/contactus'}
-            className="px-6 py-2 bg-white text-black hover:bg-gray-200 transition-colors rounded-lg"
-          >
-            {t('navigation.contactUs')}
-          </button>
-          <LanguageSwitcher />
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      <div className={`${isMenuOpen ? 'block' : 'hidden'} md:hidden absolute top-full left-0 right-0 bg-black bg-opacity-90 transition-all duration-200`}>
-        <div className="flex flex-col gap-2 p-4">
-          <button 
-            onClick={() => window.location.href='/login'}
-            className="w-full px-6 py-2 text-white hover:bg-white hover:text-black transition-colors rounded-lg border border-white text-center"
-          >
-            {t('navigation.login')}
-          </button>
-          <button 
-            onClick={() => window.location.href='/signup'}
-            className="w-full px-6 py-2 bg-white text-black hover:bg-gray-200 transition-colors rounded-lg text-center"
-          >
-            {t('navigation.signup')}
-          </button>
-          <button 
-            onClick={() => window.location.href='/contactus'}
-            className="w-full px-6 py-2 bg-white text-black hover:bg-gray-200 transition-colors rounded-lg text-center"
-          >
-            {t('navigation.contactUs')}
-          </button>
-          <div className="flex justify-center">
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </div>
+          <Dialog.Content>
+            <Dialog.Title> 
+              <Dialog.Close>
+                <div className='flex'>
+                  <IconButton
+                    size='4'
+                    variant='ghost'
+                  >
+                    <Cross1Icon />
+                  </IconButton>
+                </div>
+              </Dialog.Close>
+            </Dialog.Title>
+        
+            <div className='flex flex-col items-stretch gap-7'>
+              <Dialog.Close>
+                { buildNavLinks(true) }
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Root>
+      </div> 
     </nav>
   );
 };
