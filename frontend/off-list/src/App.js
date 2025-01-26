@@ -6,6 +6,8 @@ import HomePage from './components/HomePage';
 import PropertyDetails from './components/PropertyDetails';
 import DesignerDetails from './components/DesignerDetail';
 import DesignList from './components/DesignList';
+import DesignListPerRoomType from './components/DesignListPerRoomType';
+import DesignListPerStyle from './components/DesignListPerStyle';
 import DesignerList from './components/DesignerList';
 import ContactForm from './components/ContactForm';
 import LoginPage from './components/LoginPage';
@@ -59,6 +61,8 @@ function App() {
                 <Route path="/design/:id" element={<Layout><PropertyDetails /></Layout>} />
                 <Route path="/designer/:id" element={<Layout><DesignerDetails /></Layout>} />
                 <Route path="/design" element={<Layout><DesignList /></Layout>} />
+                <Route path="/services" element={<Layout><DesignListPerStyle /></Layout>} />
+                <Route path="/showcase" element={<Layout><DesignListPerRoomType /></Layout>} />
                 <Route path="/designer" element={<Layout><DesignerList /></Layout>} />
                 <Route path="/contact" element={<Layout><ContactForm /></Layout>} />
                 <Route path="/contactus" element={<Layout><ContactUs /></Layout>} />

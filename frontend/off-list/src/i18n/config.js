@@ -223,7 +223,9 @@ const resources = {
       hero: {
         title: 'Your personal design team',
         subtitle: "Let our professional designers bring your clients' visions to life",
-        viewDesigns: 'View Designs'
+        viewDesigns: 'View Designs Services',
+        viewDesignsService: 'View Design Styles',
+        viewDesignsStyle: 'View Design'
       },
 
       // Login Page
