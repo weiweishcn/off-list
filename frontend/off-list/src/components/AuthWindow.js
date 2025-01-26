@@ -36,21 +36,19 @@ const AuthWindow = ({ children, onBackClick, headerText, showErrorBar, errorMess
   }
 
   return (
-    <div className='flex flex-col w-[100vw] h-[100vh] items-center'>
-
+    <div className='flex flex-col w-[100vw] h-[100vh] items-center justify-center'>
       <Card 
-        className='w-[1000px] max-w-[1000px] h-[550px] max-h-[800px] bg-[var(--gray-2)] absolute top-[50%] translate-y-[-50%]'
+        className='w-full h-full bg-[var(--gray-2)] md:w-[1000px] md:h-[550px]'
         size='3'
       >
         <Flex
-          justify='between'
-          align='center'
-          height='100%'
+          className='flex-col gap-[50px] items-center h-full md:flex-row md:gap-[20px] md:p-5'
         >
           <Flex
             direction='column'
-            align='center'
+            align='left'
             gap='25px'
+            className='w-full'
           >
             <Avatar 
               src='/logo.png'
@@ -67,8 +65,7 @@ const AuthWindow = ({ children, onBackClick, headerText, showErrorBar, errorMess
           </Flex>
 
           <Box
-            width='50%'
-            height='100%'
+            className='w-full'
           >
             { children }
           </Box>
