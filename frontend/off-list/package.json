@@ -2,6 +2,7 @@
   "name": "off-list",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
     "@headlessui/react": "^2.2.0",
@@ -15,29 +16,32 @@
     "@stripe/stripe-js": "^5.2.0",
     "@tanstack/react-query": "^5.64.2",
     "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
+    "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react-swc": "^3.7.2",
     "axios": "^1.7.9",
     "html2canvas": "^1.4.1",
     "i18next": "^24.2.1",
     "i18next-browser-languagedetector": "^8.0.2",
     "konva": "^9.3.18",
     "lucide-react": "^0.468.0",
-    "pdfjs-dist": "^3.11.174",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.4.0",
     "react-konva": "^19.0.2",
-    "react-pdf": "^7.7.3",
+    "react-pdf": "^9.2.1",
     "react-router-dom": "^6.28.0",
-    "react-scripts": "^5.0.1",
+    "vite": "^6.0.11",
+    "vite-plugin-svgr": "^4.3.0",
+    "vite-tsconfig-paths": "^5.1.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
   },
   "eslintConfig": {
     "extends": [

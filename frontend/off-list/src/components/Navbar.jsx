@@ -29,7 +29,7 @@ const Navbar = () => {
       );
 
       return inDialog ? 
-        <Dialog.Close>
+        <Dialog.Close key={ key }>
           { button }
         </Dialog.Close>
       :
@@ -43,7 +43,7 @@ const Navbar = () => {
       ['/signup', 'navigation.signup'],
       ['/contactus', 'navigation.contactUs']
     ];
-    const buttons = buttonList.map(([nav, text], i) => buildButton(nav, text, `navButton${i}`));
+    const buttons = buttonList.map(([nav, text], i) => buildButton(nav, text, `navButton${i}:${inDialog}`));
 
     return (
       <>

@@ -28,7 +28,7 @@ const DesignerProjectDetails = () => {
         return;
       }
 
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/projects/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,7 +59,7 @@ const DesignerProjectDetails = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/designer/projects/${id}/floor-plan`, {
         method: 'POST',
         headers: {
@@ -89,7 +89,7 @@ const DesignerProjectDetails = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/designer/projects/${id}/final-designs`, {
         method: 'POST',
         headers: {

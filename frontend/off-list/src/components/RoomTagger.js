@@ -137,7 +137,7 @@ const RoomTagger = forwardRef(({
 
       // Upload to server
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/upload-tagged-floor-plan`,
+        `${import.meta.env.REACT_APP_API_URL}/api/upload-tagged-floor-plan`,
         formData,
         {
           headers: {

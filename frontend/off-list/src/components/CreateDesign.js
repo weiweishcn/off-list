@@ -10,7 +10,7 @@ import { calculateTotalPrice } from './PricingCalculator';
 import { loadStripe } from '@stripe/stripe-js';
 import ReactPdfViewer from './PdfViewer';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe(import.meta.env.REACT_APP_STRIPE_PUBLIC_KEY);
 
 const RoomForm = ({ room, onUpdate, onRemove }) => {
   const { t } = useTranslation();
@@ -105,7 +105,7 @@ const useAutoSave = (projectId, currentStep, formData) => {
       const token = localStorage.getItem('token');
       
       await axios.put(
-        `${process.env.REACT_APP_API_URL}/api/projects/${projectId}/progress`,
+        `${import.meta.env.REACT_APP_API_URL}/api/projects/${projectId}/progress`,
         {
           currentStep,
           ...formData,
@@ -189,7 +189,7 @@ const loadSavedProgress = async (projectId) => {
   try {
     const token = localStorage.getItem('token');
     const response = await axios.get(
-      `${process.env.REACT_APP_API_URL}/api/projects/${projectId}`,
+      `${import.meta.env.REACT_APP_API_URL}/api/projects/${projectId}`,
       {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -235,7 +235,7 @@ const initializeProject = async () => {
     }
 
     const response = await axios.post(
-      `${process.env.REACT_APP_API_URL}/api/projects/initialize`,
+      `${import.meta.env.REACT_APP_API_URL}/api/projects/initialize`,
       {},
       {
         headers: {
@@ -463,7 +463,7 @@ const handleNext = async () => {
 
       // Create a payment session on your backend
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/create-payment-session`,
+        `${import.meta.env.REACT_APP_API_URL}/api/create-payment-session`,
         {
           amount: pricingData.total, // Amount in cents
           projectDetails: {
@@ -558,7 +558,7 @@ const isCurrentStepValid = () => {
         return;
       }
 
-      const apiUrl = process.env.REACT_APP_API_URL;
+      const apiUrl = import.meta.env.REACT_APP_API_URL;
       
       const isValid = rooms.every(room => {
         const details = roomDetails[room.id];
@@ -640,7 +640,7 @@ const isCurrentStepValid = () => {
     };
 
     const response = await axios.post(
-      `${process.env.REACT_APP_API_URL}/api/projects`, 
+      `${import.meta.env.REACT_APP_API_URL}/api/projects`, 
       projectData,
       {
         headers: {
@@ -1257,7 +1257,7 @@ case 'roomDetails':
 
             try {
               const response = await axios.post(
-                `${process.env.REACT_APP_API_URL}/api/upload-floor-plan`,
+                `${import.meta.env.REACT_APP_API_URL}/api/upload-floor-plan`,
                 formData,
                 {
                   headers: {

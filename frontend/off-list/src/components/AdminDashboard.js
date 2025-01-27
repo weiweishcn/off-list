@@ -181,7 +181,7 @@ const AdminDashboard = () => {
         return;
       }
 
-      const apiUrl = process.env.REACT_APP_API_URL;
+      const apiUrl = import.meta.env.REACT_APP_API_URL;
       
       const [projectsResponse, designersResponse] = await Promise.all([
         fetch(`${apiUrl}/api/admin/projects`, {
@@ -214,7 +214,7 @@ const AdminDashboard = () => {
   const handleAssignDesigner = async (projectId, designerId) => {
     try {
       const token = localStorage.getItem('token');
-      const apiUrl = process.env.REACT_APP_API_URL;
+      const apiUrl = import.meta.env.REACT_APP_API_URL;
       
       const response = await fetch(`${apiUrl}/api/admin/projects/${projectId}/assign`, {
         method: 'POST',
