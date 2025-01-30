@@ -25,7 +25,7 @@ const DesignerDashboard = () => {
     // Fetch projects assigned to the designer
     const fetchAssignedProjects = async () => {
       try {
-        const apiUrl = import.meta.env.REACT_APP_API_URL;
+        const apiUrl = import.meta.env.VITE_API_URL;
         const response = await fetch(`${apiUrl}/api/designer-projects`, {
           headers: {
             'Authorization': `Bearer ${token}`

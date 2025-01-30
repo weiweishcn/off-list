@@ -21,7 +21,7 @@ const ProjectDetails = () => {
           return;
         }
 
-        const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://localhost:3001';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const response = await fetch(`${apiUrl}/api/projects/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,

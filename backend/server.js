@@ -948,7 +948,7 @@ app.get('/api/admin/projects', async (req, res) => {
     const decoded = jwt.verify(token, 'secret-key');
     
     // Verify admin status
-    if (decoded.userType !== 'admin') {
+    if (decoded.userType !== 'Admin') {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -976,14 +976,14 @@ app.get('/api/admin/designers', async (req, res) => {
   
   try {
     const decoded = jwt.verify(token, 'secret-key');
-    if (decoded.userType !== 'admin') {
+    if (decoded.userType !== 'Admin') {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
     const result = await pool.query(`
       SELECT id, email 
       FROM users 
-      WHERE user_type = 'designer'
+      WHERE user_type = 'Designer'
       ORDER BY email ASC
     `);
 
@@ -1002,7 +1002,7 @@ app.post('/api/admin/projects/:projectId/assign', async (req, res) => {
   
   try {
     const decoded = jwt.verify(token, 'secret-key');
-    if (decoded.userType !== 'admin') {
+    if (decoded.userType !== 'Admin') {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -1230,7 +1230,7 @@ app.get('/api/projects/:id', async (req, res) => {
     const decoded = jwt.verify(token, 'secret-key');
     
     // First, check if the user has access to this project
-    if (decoded.userType !== 'admin') {
+    if (decoded.userType !== 'Admin') {
     const accessCheck = await pool.query(`
       SELECT p.id 
       FROM projects p
@@ -1456,7 +1456,7 @@ app.get('/api/projects', async (req, res) => {
     `;
 
     // Different WHERE clauses based on user type
-    const whereClause = userType === 'designer' 
+    const whereClause = userType === 'Designer' 
       ? `WHERE p.designer_id = (SELECT id FROM users WHERE email = $1)`
       : `WHERE p.user_id = (SELECT id FROM users WHERE email = $1)`;
 

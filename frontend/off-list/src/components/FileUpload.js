@@ -93,7 +93,7 @@ const onSubmit = async e => {
   console.log("uploading via fileupload");
 
   try {
-    const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://165.232.131.137:3001';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://165.232.131.137:3001';
     const endpoint = uploadType === 'floor_plan' 
       ? `${apiUrl}/api/upload-floor-plan`
       : `${apiUrl}/api/upload`;

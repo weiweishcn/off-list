@@ -14,7 +14,7 @@ const LoginPage = () => {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials) => {
-      const response = await fetch(`${import.meta.env.REACT_APP_API_URL}/api/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -33,6 +33,7 @@ const LoginPage = () => {
       localStorage.setItem('username', variables.email);
       localStorage.setItem('userType', data.userType);
 
+      console.log(data.userType);
       switch (data.userType) {
         case 'Designer':
           navigate('/designer-dashboard');

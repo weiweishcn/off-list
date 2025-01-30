@@ -372,7 +372,7 @@ const DesignList = () => {
   React.useEffect(() => {
     const fetchDesigns = async () => {
       try {
-        const apiUrl = import.meta.env.REACT_APP_API_URL || 'http://localhost:3001';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const response = await fetch(`${apiUrl}/api/design`);
         
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
