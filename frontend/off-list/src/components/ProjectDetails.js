@@ -34,7 +34,9 @@ const ProjectDetails = () => {
         }
 
         const data = await response.json();
+        
         setProject(data);
+        console.log(project);
       } catch (error) {
         console.error('Error fetching project details:', error);
       } finally {

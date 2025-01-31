@@ -12,7 +12,8 @@ const FileUpload = ({ onUploadComplete, accept, uploadType, projectFolder, roomT
     success: false, 
     message: '' 
   });
-
+  console.log("project Folder is: " + projectFolder);
+  console.log("room type is: " + roomType);
   const validateFile = (file) => {
     const maxSize = 100 * 1024 * 1024; // 100MB
     if (file.size > maxSize) {

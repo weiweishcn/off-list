@@ -317,9 +317,13 @@ app.post('/api/upload', (req, res) => {
 // Update project endpoint for saving progress
 app.put('/api/projects/:projectId', async (req, res) => {
   const { projectId } = req.params;
-  const { designType, rooms, hasFloorPlan, floorPlanUrls, status } = req.body;
   const token = req.headers.authorization?.split(' ')[1];
-  
+  const { rooms, hasFloorPlan, originalFloorPlanUrl, taggedFloorPlanUrl, 
+        bedrooms, bathrooms, squareFootage } = req.body;
+    // Start transaction
+    client = await pool.connect();
+    await client.query('BEGIN');
+    
   try {
     const decoded = jwt.verify(token, 'secret-key');
     
@@ -327,12 +331,13 @@ app.put('/api/projects/:projectId', async (req, res) => {
     await pool.query(`
       UPDATE projects 
       SET 
-        design_type = $1,
-        has_floor_plan = $2,
-        status = $3,
-        last_modified_at = CURRENT_TIMESTAMP
-      WHERE id = $4 AND user_id = (SELECT id FROM users WHERE email = $5)
-    `, [designType, hasFloorPlan, status || 'draft', projectId, decoded.username]);
+        has_floor_plan = $1,
+        status = $2,
+        bedrooms = $3,
+        bathrooms = $4,
+        square_footage = $5
+      WHERE id = $6 AND user_id = (SELECT id FROM users WHERE email = $7)
+    `, [hasFloorPlan, 'pending', bedrooms, bathrooms, squareFootage, projectId, decoded.username]);
 
     // Update room details if provided
     if (rooms?.length > 0) {
@@ -490,6 +495,8 @@ app.post('/api/upload-tagged-floor-plan', (req, res) => {
   });
 });
 
+// In server.js, update the progress endpoint handling:
+
 app.put('/api/projects/:projectId/progress', async (req, res) => {
   const { projectId } = req.params;
   const { 
@@ -497,17 +504,15 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
     designType, 
     hasExistingFloorPlan,
     floorPlanUrls,
-    taggedRooms,
+    rooms,
     roomDetails,
-    status
+    status,
+    homeInfo
   } = req.body;
 
-  console.log('Received tagged rooms:', JSON.stringify(taggedRooms, null, 2));
-  console.log('Room details:', JSON.stringify(roomDetails, null, 2));
-
   const token = req.headers.authorization?.split(' ')[1];
-  
   let client;
+  
   try {
     const decoded = jwt.verify(token, 'secret-key');
     
@@ -522,7 +527,7 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
     client = await pool.connect();
     await client.query('BEGIN');
 
-    // Update project main details including floor plan URLs
+    // Update project main details including home info
     await client.query(`
       UPDATE projects 
       SET 
@@ -532,8 +537,11 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
         status = $4,
         floor_plan_url = $5,
         tagged_floor_plan_url = $6,
+        bedrooms = $7,
+        bathrooms = $8,
+        squarefootage = $9,
         last_modified_at = CURRENT_TIMESTAMP
-      WHERE id = $7 AND user_id = $8
+      WHERE id = $10 AND user_id = $11
     `, [
       designType, 
       hasExistingFloorPlan, 
@@ -541,48 +549,58 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
       status || 'draft',
       floorPlanUrls?.[0] || null,
       floorPlanUrls?.[1] || null,
+      parseInt(homeInfo?.totalBedrooms) || null,
+      parseFloat(homeInfo?.totalBathrooms) || null,
+      parseInt(homeInfo?.totalSquareFootage) || null,
       projectId, 
       userId
     ]);
 
     // Update rooms if provided
-    if (taggedRooms?.length > 0) {
-      console.log('Processing rooms...');
+    if (rooms?.length > 0) {
+      console.log('Processing rooms:', rooms);
       
       // First, remove existing rooms for this project
       await client.query('DELETE FROM project_rooms WHERE project_id = $1', [projectId]);
 
       // Insert new rooms
-      for (const room of taggedRooms) {
-        console.log('Processing room:', {
-          id: room.id,
-          type: room.type,
-          details: roomDetails[room.id]
-        });
-
-        const details = roomDetails[room.id] || {};
-        const roomValues = [
-          projectId,
-          room.type || room.roomType,  // Try both possible property names
-          parseFloat(details.squareFootage) || null,
-          parseFloat(details.length) || null,
-          parseFloat(details.width) || null,
-          parseFloat(details.height) || null
-        ];
-
-        console.log('Room values for insert:', roomValues);
+      for (const room of rooms) {
+        console.log('Processing room:', room);
 
         const roomResult = await client.query(`
           INSERT INTO project_rooms 
             (project_id, room_type, square_footage, length, width, height)
           VALUES ($1, $2, $3, $4, $5, $6)
           RETURNING id
-        `, roomValues);
+        `, [
+          projectId,
+          room.type,
+          room.squareFootage,
+          room.length,
+          room.width,
+          room.height
+        ]);
 
         const roomId = roomResult.rows[0].id;
 
-        // Only insert preferences if we have style or description
-        if (details.style || details.description) {
+        // Insert room photos if they exist
+        if (room.existingPhotos?.length > 0) {
+          const existingPhotoValues = room.existingPhotos
+            .map(url => `(${roomId}, '${url}', 'existing')`)
+            .join(', ');
+
+          if (existingPhotoValues) {
+            await client.query(`
+              INSERT INTO room_photos 
+                (room_id, photo_url, photo_type)
+              VALUES ${existingPhotoValues}
+            `);
+          }
+        }
+
+        // Add room design preferences if they exist
+        const details = roomDetails?.[room.id];
+        if (details?.style || details?.description) {
           await client.query(`
             INSERT INTO room_design_preferences 
               (room_id, style, description)
@@ -602,11 +620,7 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
 
   } catch (error) {
     if (client) await client.query('ROLLBACK');
-    console.error('Error saving progress:', {
-      error,
-      taggedRooms: taggedRooms?.map(r => ({ id: r.id, type: r.type })),
-      roomDetails
-    });
+    console.error('Error saving progress:', error);
     res.status(500).json({
       error: 'Failed to save progress',
       details: error.message
@@ -1046,19 +1060,22 @@ app.post('/api/projects', async (req, res) => {
     }
 
     const userId = userResult.rows[0].id;
-    const { rooms, hasFloorPlan, originalFloorPlanUrl, taggedFloorPlanUrl } = req.body;
-
+    //const { rooms, hasFloorPlan, originalFloorPlanUrl, taggedFloorPlanUrl } = req.body;
+  const { rooms, hasFloorPlan, originalFloorPlanUrl, taggedFloorPlanUrl, 
+        bedrooms, bathrooms, squareFootage } = req.body;
     // Start transaction
     client = await pool.connect();
     await client.query('BEGIN');
 
-    // 1. Create project record
     const projectResult = await client.query(
       `INSERT INTO projects 
-       (user_id, status, has_floor_plan, completed, created_at, last_modified_at, name) 
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5) 
-       RETURNING id`,
-      [userId, 'pending', hasFloorPlan, false, `Project ${new Date().toLocaleDateString()}`]
+      (user_id, status, has_floor_plan, completed, created_at, last_modified_at, 
+        name, bedrooms, bathrooms, square_footage) 
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5, $6, $7, $8) 
+      RETURNING id`,
+      [userId, 'pending', hasFloorPlan, false, 
+      `Project ${new Date().toLocaleDateString()}`,
+      bedrooms, bathrooms, squareFootage]
     );
 
     const projectId = projectResult.rows[0].id;
@@ -1253,7 +1270,6 @@ app.get('/api/projects/:id', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         p.*,
-        pf.floor_plan_url,
         pf.tagged_floor_plan_url,
         u.email as client_email,
         json_agg(
@@ -1318,15 +1334,13 @@ app.get('/api/projects/:id', async (req, res) => {
     if (project.final_designs === null) {
       project.final_designs = [];
     }
-    
+    console.log(project);
     res.json(project);
   } catch (error) {
     console.error('Error fetching project details:', error);
     res.status(500).json({ error: error.message });
   }
 });
-
-// Add these endpoints to server.js
 
 // Get comments for a specific design
 app.get('/api/projects/:projectId/designs/:designId/comments', async (req, res) => {

@@ -12,8 +12,37 @@ import ReactPdfViewer from './PdfViewer';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-const RoomForm = ({ room, onUpdate, onRemove }) => {
+const ROOM_TYPES = [
+  { id: 'bedroom', label: 'Bedroom', multiple: true },
+  { id: 'kitchen', label: 'Kitchen', multiple: false },
+  { id: 'bathroom', label: 'Bathroom', multiple: true },
+  { id: 'livingRoom', label: 'Living Room', multiple: false },
+  { id: 'diningRoom', label: 'Dining Room', multiple: false },
+  { id: 'office', label: 'Office', multiple: true },
+  { id: 'laundry', label: 'Laundry Room', multiple: false },
+  { id: 'other', label: 'Other', multiple: true }
+];
+
+
+const RoomForm = ({ room, onUpdate, onRemove, projectFolder }) => {
   const { t } = useTranslation();
+    const handleRoomPhotoUpload = (urls, type) => {
+      Console.log('Room photo upload:', {
+      urls,
+      type,
+      roomType: room.type,
+      roomId: room.id,
+      projectFolder
+    });
+    const updatedRoom = {
+      ...room,
+      [type === 'existing' ? 'existingPhotos' : 'inspirationPhotos']: [
+        ...(room[type === 'existing' ? 'existingPhotos' : 'inspirationPhotos'] || []),
+        ...urls
+      ]
+    };
+    onUpdate(updatedRoom);
+  };
   return (
     <div className="p-4 border rounded-lg mb-4 bg-white shadow-sm">
       <div className="flex justify-between items-center mb-4">
@@ -27,16 +56,24 @@ const RoomForm = ({ room, onUpdate, onRemove }) => {
       </div>
       
       <div className="grid gap-4">
+        {/* Room Type Selection */}
         <div>
           <label className="block text-sm font-medium mb-1">
-            {t('createDesign.steps.roomDetails.dimensions.title')}
+            Room Type *
           </label>
-          <input
-            type="text"
+          <select
             value={room.type}
             onChange={(e) => onUpdate({ ...room, type: e.target.value })}
             className="w-full p-2 border rounded-md"
-          />
+            required
+          >
+            <option value="">Select a room type</option>
+            {ROOM_TYPES.map(type => (
+              <option key={type.id} value={type.id}>
+                {type.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -85,13 +122,53 @@ const RoomForm = ({ room, onUpdate, onRemove }) => {
               className="w-full p-2 border rounded-md"
             />
           </div>
+        {/* Existing Room Photos */}
+        <div className="col-span-full">
+          <label className="block text-sm font-medium mb-2">
+            Current Room Photos
+            <span className="block text-gray-500 text-xs mt-1">
+              Upload photos of how the room currently looks
+            </span>
+          </label>
+          <FileUpload
+            onUploadComplete={(urls) => handleRoomPhotoUpload(urls, 'existing')}
+            accept="image/jpeg,image/png,image/jpg"
+            uploadType="existing"
+            projectFolder={projectFolder}
+            roomType={room.type}
+            roomId={room.id}
+          />
+          {room.existingPhotos && room.existingPhotos.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {room.existingPhotos.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Room photo ${index + 1}`}
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => {
+                      const updatedPhotos = room.existingPhotos.filter((_, i) => i !== index);
+                      onUpdate({ ...room, existingPhotos: updatedPhotos });
+                    }}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove photo"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         </div>
       </div>
     </div>
   );
 };
 
-
+/*
 // Define this outside the component, at the top of the file
 const useAutoSave = (projectId, currentStep, formData) => {
   const [isSaving, setIsSaving] = useState(false);
@@ -138,7 +215,7 @@ const useAutoSave = (projectId, currentStep, formData) => {
 
   return { isSaving, lastSaved, saveProgress };
 };
-
+*/
 const CreateDesign = () => {
   const { t } = useTranslation();
   
@@ -163,9 +240,37 @@ const CreateDesign = () => {
     const [selectedPDFPage, setSelectedPDFPage] = useState(null);
   const [pdfPreviewUrl, setPDFPreviewUrl] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
-  const [rooms, setRooms] = useState([
-    { id: 1, type: '', squareFootage: '', length: '', width: '', height: '' }
-  ]);
+const [rooms, setRooms] = useState([
+  { 
+    id: 1, 
+    type: '', 
+    squareFootage: '', 
+    length: '', 
+    width: '', 
+    height: '',
+    existingPhotos: [],
+    inspirationPhotos: []
+  }
+]);
+
+const handleAddRoom = () => {
+  const newRoom = { 
+    id: Date.now(), 
+    type: '', 
+    squareFootage: '', 
+    length: '', 
+    width: '', 
+    height: '',
+    existingPhotos: [],
+  };
+  setRooms([...rooms, newRoom]);
+};
+
+const [homeInfo, setHomeInfo] = useState({
+  totalBedrooms: '',
+  totalBathrooms: '',
+  totalSquareFootage: ''
+});
   const [roomTags, setRoomTags] = useState([]);
 
   // Add these new state variables to CreateDesign component
@@ -174,14 +279,61 @@ const [projectFolder, setProjectFolder] = useState(null);
 
   const formData = {
     designType,
+    homeInfo, 
+    rooms: rooms.map(room => ({
+    id: room.id,
+    type: room.type,
+    dimensions: {
+      squareFootage: room.squareFootage,
+      length: room.length,
+      width: room.width,
+      height: room.height
+    },
+    existingPhotos: room.existingPhotos || [],
+    inspirationPhotos: room.inspirationPhotos || []
+  })),
     hasExistingFloorPlan,
     floorPlanUrls,
     taggedRooms,
     roomDetails
   };
 
+    const handleExistingPhotosUpload = (urls) => {
+    onUpdate({
+      ...room,
+      existingPhotos: [...(room.existingPhotos || []), ...urls]
+    });
+  };
 
-  const { isSaving, lastSaved, saveProgress } = useAutoSave(projectId, currentStep, formData);
+  const handleUpdateRoom = (updatedRoom) => {
+    // Check if room type is being changed
+    if (updatedRoom.type !== rooms.find(r => r.id === updatedRoom.id)?.type) {
+      const roomType = ROOM_TYPES.find(t => t.id === updatedRoom.type);
+      if (roomType && !roomType.multiple) {
+        const existingCount = rooms.filter(r => r.type === updatedRoom.type).length;
+        if (existingCount > 0) {
+          setShowError({
+            show: true,
+            message: `Only one ${roomType.label} is allowed`
+          });
+          return;
+        }
+      }
+    }
+    
+    setRooms(rooms.map(room => 
+      room.id === updatedRoom.id ? updatedRoom : room
+    ));
+  };
+
+  const handleRemoveRoom = (roomId) => {
+    if (rooms.length > 1) {
+      setRooms(rooms.filter(room => room.id !== roomId));
+    }
+  };
+
+
+  //const { isSaving, lastSaved, saveProgress } = useAutoSave(projectId, currentStep, formData);
 
 
 // Add this function to load saved progress
@@ -247,6 +399,7 @@ const initializeProject = async () => {
 
     setProjectId(response.data.projectId);
     setProjectFolder(response.data.projectFolder);
+    console.log("project id is" + response.data.projectId);
     return true;
 
   } catch (error) {
@@ -359,63 +512,44 @@ useEffect(() => {
     }
   };
 
-  const questions = [
-    {
-      label: t('createDesign.steps.designType.title'),
-      type: 'designType',
-      description: t('createDesign.steps.designType.description')
-    },
-    {
-      label: t('createDesign.steps.floorPlan.title'),
-      type: 'floorPlanChoice',
-      description: t('createDesign.steps.floorPlan.description')
-    },
-    {
-      label: t('roomForm.upload.current'),
-      type: 'floorPlanUpload',
-      description: t('roomForm.upload.currentDesc'),
-      show: hasExistingFloorPlan === true
-    },
-    {
-      label: t('navigation.progress', { current: 3, total: 5 }),
-      type: 'roomTagging',
-      description: t('createDesign.steps.roomDetails.description'),
-      show: hasExistingFloorPlan === true && floorPlanUrls.length > 0
-    },
-    {
-      label: t('createDesign.steps.roomDetails.title'),
-      type: 'roomDetails',
-      description: t('createDesign.steps.roomDetails.description')
-    },
-    {
-      label: t('createDesign.steps.pricing.title'),
-      type: 'pricingReview',
-      description: t('createDesign.steps.pricing.description')
-    }
-  ].filter(q => {
-    // If show property exists, use it for filtering, otherwise show the question
-    return q.hasOwnProperty('show') ? q.show : true;
-  });
+// Modified questions array definition
+const questions = [
+  {
+    label: t('createDesign.steps.designType.title'),
+    type: 'designType',
+    description: t('createDesign.steps.designType.description')
+  },
+  {
+    label: 'Home Information',
+    type: 'homeInfo',
+    description: 'Tell us about your home'
+  },
+  {
+    label: t('createDesign.steps.floorPlan.title'),
+    type: 'floorPlanChoice',
+    description: t('createDesign.steps.floorPlan.description')
+  },
+  {
+    label: t('roomForm.upload.current'),
+    type: 'floorPlanUpload',
+    description: t('roomForm.upload.currentDesc'),
+    show: hasExistingFloorPlan === true
+  },
+  {
+    label: t('createDesign.steps.roomDetails.title'),
+    type: 'rooms',
+    description: t('createDesign.steps.roomDetails.description')
+  },
+  {
+    label: t('createDesign.steps.pricing.title'),
+    type: 'pricingReview',
+    description: t('createDesign.steps.pricing.description'),
+    show: true // Explicitly show pricing review step
+  }
+].filter(q => !q.hasOwnProperty('show') || q.show === true); // Only keep questions that should be shown
 
-
-  const handleAddRoom = () => {
-    setRooms([
-      ...rooms,
-      { id: Date.now(), type: '', squareFootage: '', length: '', width: '', height: '' }
-    ]);
-  };
-
-  const handleUpdateRoom = (updatedRoom) => {
-    setRooms(rooms.map(room => 
-      room.id === updatedRoom.id ? updatedRoom : room
-    ));
-  };
-
-  const handleRemoveRoom = (roomId) => {
-    if (rooms.length > 1) {
-      setRooms(rooms.filter(room => room.id !== roomId));
-    }
-  };
+// Add logging to track filtered questions
+console.log('Filtered questions:', questions);
 
 const handleNext = async () => {
   console.log("handlenext triggered");
@@ -425,6 +559,17 @@ const handleNext = async () => {
   }
   const currentQuestion = questions[currentStep];
   console.log("handlenext triggered");
+
+    console.log("handleNext triggered, current step:", currentStep);
+  
+  if (!isCurrentStepValid()) {
+    console.log("Validation failed");
+    setShowValidation(true);
+    return;
+  }
+
+  console.log("Current question type:", currentQuestion.type);
+
   // Special handling for room tagging step
   if (currentQuestion.type === 'roomTagging') {
     console.log("updating tagged floor plan");
@@ -450,30 +595,98 @@ const handleNext = async () => {
     }
   }
 
+    // If we're moving from roomDetails to pricingReview, create the project
+// In the handleNext function in CreateDesign.js, update the project progress data formatting:
+
+if (currentQuestion.type === 'rooms') {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Format rooms data properly for the backend
+    const formattedRooms = rooms.map(room => ({
+      id: room.id,
+      type: room.type,
+      squareFootage: parseFloat(room.squareFootage) || null,
+      length: parseFloat(room.length) || null,
+      width: parseFloat(room.width) || null,
+      height: parseFloat(room.height) || null,
+      existingPhotos: room.existingPhotos || []
+    }));
+    
+    // Save progress before moving to next step
+    await axios.put(
+      `${import.meta.env.VITE_API_URL}/api/projects/${projectId}/progress`,
+      {
+        currentStep,
+        designType,
+        hasExistingFloorPlan,
+        floorPlanUrls,
+        rooms: formattedRooms, // Use formatted rooms data
+        roomDetails,
+        status: 'draft',
+        homeInfo: {
+          totalBedrooms: parseInt(homeInfo.totalBedrooms) || null,
+          totalBathrooms: parseFloat(homeInfo.totalBathrooms) || null,
+          totalSquareFootage: parseInt(homeInfo.totalSquareFootage) || null
+        }
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('Progress saved with rooms:', formattedRooms);
+    
+    // After successful save, proceed to next step
+    //setCurrentStep(prev => prev + 1);
+    setShowValidation(false);
+  } catch (error) {
+    console.error('Error saving progress:', error);
+    setShowError({
+      show: true,
+      message: 'Failed to save progress. Please try again.'
+    });
+  }
+}
+
   // If we're on the pricing review step, redirect to Stripe
   if (currentQuestion.type === 'pricingReview') {
+    console.log("reached pricing review");
     try {
       setShowError({ show: false, message: '' });
       
-      // Calculate the final price
-      const pricingData = calculateTotalPrice(taggedRooms.map(room => ({
-        ...room,
-        ...roomDetails[room.id]
-      })));
+      // Calculate total price based on total square footage
+      const squareFootage = parseFloat(homeInfo.totalSquareFootage);
+      const ratePerSqFt = 1.00; // $1 per square foot
+      const totalPrice = squareFootage * ratePerSqFt;
 
-      // Create a payment session on your backend
+      const pricingData = {
+        squareFootage,
+        ratePerSqFt,
+        total: totalPrice,
+        deposit: totalPrice * 0.6, // 60% deposit
+        remaining: totalPrice * 0.4 // 40% remaining
+      };
+
+      console.log('Calculated pricing data:', pricingData);
+
+      const projectDetails = {
+        projectId,
+        designType,
+        rooms,
+        homeInfo,
+        pricing: pricingData
+      };
+
+      // Create payment session with the calculated price
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/create-payment-session`,
         {
-          amount: pricingData.total, // Amount in cents
-          projectDetails: {
-            designType,
-            rooms: taggedRooms.map(room => ({
-              ...room,
-              details: roomDetails[room.id]
-            })),
-            pricing: pricingData
-          }
+          amount: Math.round(pricingData.deposit * 100), // Convert deposit amount to cents
+          projectDetails
         },
         {
           headers: {
@@ -483,57 +696,95 @@ const handleNext = async () => {
         }
       );
 
-      // Get the Stripe session ID from the response
-      const { sessionId } = response.data;
+      console.log('Payment session response:', response.data);
 
-      // Redirect to Stripe Checkout
+      const { sessionId } = response.data;
+      if (!sessionId) {
+        throw new Error('No session ID received from server');
+      }
+
+      // Initialize Stripe and redirect
       const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Failed to initialize Stripe');
+      }
+
       const { error } = await stripe.redirectToCheckout({
-        sessionId
+        sessionId: sessionId
       });
 
       if (error) {
-        setShowError({
-          show: true,
-          message: 'Payment initialization failed. Please try again.'
-        });
+        console.error('Stripe redirect error:', error);
+        throw new Error(error.message);
       }
+
     } catch (error) {
-      console.error('Payment session creation failed:', error);
+      console.error('Payment flow error:', error);
       setShowError({
         show: true,
-        message: error.response?.data?.message || 'Failed to initialize payment. Please try again.'
+        message: error.message || 'Failed to process payment. Please try again.'
       });
     }
     return;
   }
 
-  // Normal step progression for non-payment steps
+  // For non-payment steps, proceed normally
   setCurrentStep(prev => prev + 1);
   setShowValidation(false);
+  console.log('Regular step progression');
+  console.log('Current step:', currentStep);
+  console.log('Next step:', currentStep + 1);
+  console.log('Next question type:', questions[currentStep + 1]?.type);
+  
 };
 
 const isCurrentStepValid = () => {
   const currentQuestion = questions[currentStep];
+  console.log('=== Validating Step ===');
+  console.log('Current step:', currentStep);
+  console.log('Question type:', currentQuestion.type);
   
   switch (currentQuestion.type) {
     case 'designType':
+      console.log('Design type validation:', { designType });
       return designType !== null;
+      
+    case 'homeInfo':
+      console.log('Home info validation:', { homeInfo });
+      return Boolean(
+        homeInfo.totalBedrooms && 
+        homeInfo.totalBathrooms && 
+        homeInfo.totalSquareFootage
+      );
+      
     case 'floorPlanChoice':
+      console.log('Floor plan choice validation:', { hasExistingFloorPlan });
       return hasExistingFloorPlan !== null;
+      
     case 'floorPlanUpload':
+      console.log('Floor plan upload validation:', { hasExistingFloorPlan, floorPlanUrls });
       return !hasExistingFloorPlan || floorPlanUrls.length > 0;
-    case 'roomTagging':
-      // Require at least one tagged room
-      return taggedRooms.length > 0;
-    case 'roomDetails':
-      // Check if all tagged rooms have required details (style and squareFootage)
-      return taggedRooms.every(room => {
-        const details = roomDetails[room.id];
-        return details?.style && 
-               details?.squareFootage;
-      });
+      
+    case 'rooms':
+      // Log each room's validation state
+      const roomValidations = rooms.map(room => ({
+        id: room.id,
+        type: room.type,
+        hasSquareFootage: Boolean(room.squareFootage),
+        hasPhotos: Boolean(room.existingPhotos?.length > 0),
+        isValid: Boolean(
+          room.type && 
+          room.squareFootage  
+        )
+      }));
+      console.log('Rooms validation:', roomValidations);
+      return rooms.every(room => 
+        room.type && 
+        room.squareFootage 
+      );
+      
     default:
+      console.log('Default validation - returning true');
       return true;
   }
 };
@@ -620,55 +871,22 @@ const isCurrentStepValid = () => {
   };
 
   const handleSaveForLater = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    const projectData = {
-      designType,
-      status: 'draft',
-      rooms: taggedRooms.map(room => ({
-        ...room,
-        details: roomDetails[room.id]
-      })),
-      hasFloorPlan: hasExistingFloorPlan,
-      floorPlanUrls,
-      pricing: calculateTotalPrice(taggedRooms.map(room => ({
-        ...room,
-        ...roomDetails[room.id]
-      }))),
-      depositPaid: false
-    };
-
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/projects`, 
-      projectData,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (response.status === 200) {
       navigate('/dashboard', { 
         state: { 
           message: 'Project saved successfully! You can complete payment later from your dashboard.' 
         }
       });
-    }
-  } catch (error) {
-    console.error('Error saving project:', error);
-    setShowError({
-      show: true,
-      message: error.response?.data?.message || 'Failed to save project. Please try again.'
-    });
-  }
 };
 
   const renderCurrentStep = () => {
+    if (currentStep < 0 || currentStep >= questions.length) {
+    return null;
+  }
     const currentQuestion = questions[currentStep];
-
+  if (!currentQuestion) {
+    console.error('No question found for step:', currentStep);
+    return null;
+  }
     switch (currentQuestion.type) {
       case 'designType':
         return (
@@ -708,6 +926,71 @@ const isCurrentStepValid = () => {
           </div>
         );
 
+        case 'homeInfo':
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
+      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
+      
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Number of Bedrooms *
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={homeInfo.totalBedrooms}
+            onChange={(e) => setHomeInfo(prev => ({
+              ...prev,
+              totalBedrooms: e.target.value
+            }))}
+            className="w-full p-2 border rounded-md"
+            placeholder="Enter number of bedrooms"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Number of Bathrooms *
+          </label>
+          <input
+            type="number"
+            min="1"
+            step="0.5"
+            value={homeInfo.totalBathrooms}
+            onChange={(e) => setHomeInfo(prev => ({
+              ...prev,
+              totalBathrooms: e.target.value
+            }))}
+            className="w-full p-2 border rounded-md"
+            placeholder="Enter number of bathrooms"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Total Square Footage *
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={homeInfo.totalSquareFootage}
+            onChange={(e) => setHomeInfo(prev => ({
+              ...prev,
+              totalSquareFootage: e.target.value
+            }))}
+            className="w-full p-2 border rounded-md"
+            placeholder="Enter total square footage"
+            required
+          />
+        </div>
+      </div>
+    </div>
+  );
+
       case 'rooms':
         return (
           <div className="space-y-4">
@@ -722,6 +1005,7 @@ const isCurrentStepValid = () => {
                 room={room}
                 onUpdate={handleUpdateRoom}
                 onRemove={() => handleRemoveRoom(room.id)}
+                projectFolder={projectFolder} // Explicitly pass projectFolder
               />
             ))}
 
@@ -830,10 +1114,13 @@ case 'floorPlanChoice':
           </div>
         );
 case 'pricingReview':
-  const pricingData = calculateTotalPrice(taggedRooms.map(room => ({
-    ...room,
-    ...roomDetails[room.id]
-  })));
+  console.log('reached pricing review');
+  const squareFootage = parseFloat(homeInfo.totalSquareFootage);
+  const ratePerSqFt = 1.00;
+  const totalPrice = squareFootage * ratePerSqFt;
+  const deposit = totalPrice * 0.6;
+  const remaining = totalPrice * 0.4;
+  console.log(squareFootage);
 
   return (
     <div className="space-y-6">
@@ -847,34 +1134,27 @@ case 'pricingReview':
           <h3 className="text-lg font-medium mb-4">Project Cost Breakdown</h3>
           
           <div className="space-y-4">
-            {pricingData.rooms.map((room, index) => (
-              <div 
-                key={index}
-                className="flex justify-between items-center py-3 border-b last:border-0"
-              >
-                <div>
-                  <h4 className="font-medium">{room.roomName}</h4>
-                  <p className="text-sm text-gray-600">
-                    {room.squareFootage} sq ft × ${room.ratePerSqFt.toFixed(2)}/sq ft
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">${room.basePrice.toFixed(2)}</p>
-                </div>
+            <div className="flex justify-between items-center py-3 border-b">
+              <div>
+                <h4 className="font-medium">Total Square Footage</h4>
+                <p className="text-sm text-gray-600">
+                  {squareFootage} sq ft × ${ratePerSqFt.toFixed(2)}/sq ft
+                </p>
               </div>
-            ))}
+              <div className="text-right">
+                <p className="font-medium">${totalPrice.toFixed(2)}</p>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 pt-4 border-t space-y-4">
             <div className="flex justify-between items-center text-gray-600">
               <div>
                 <h4 className="text-lg">Total Project Cost</h4>
-                <p className="text-sm">
-                  Total Area: {pricingData.rooms.reduce((sum, room) => sum + room.squareFootage, 0)} sq ft
-                </p>
+                <p className="text-sm">Based on total square footage</p>
               </div>
               <div className="text-right">
-                <p className="text-lg">${pricingData.total.toFixed(2)}</p>
+                <p className="text-lg">${totalPrice.toFixed(2)}</p>
               </div>
             </div>
 
@@ -885,7 +1165,7 @@ case 'pricingReview':
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-blue-600">
-                  ${(pricingData.total * 0.6).toFixed(2)}
+                  ${deposit.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -896,7 +1176,7 @@ case 'pricingReview':
                 <p>Due upon design completion</p>
               </div>
               <div className="text-right">
-                <p>${(pricingData.total * 0.4).toFixed(2)}</p>
+                <p>${remaining.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -926,7 +1206,7 @@ case 'pricingReview':
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <h4 className="text-sm font-medium mb-2">Important Notes:</h4>
             <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Pricing is calculated based on room square footage</li>
+              <li>• Pricing is calculated based on total home square footage</li>
               <li>• Current rate: $1.00 per square foot</li>
               <li>• 60% deposit is required to begin the project</li>
               <li>• Remaining 40% will be due upon design completion</li>
@@ -938,306 +1218,47 @@ case 'pricingReview':
       </div>
     </div>
   );
+
         
-case 'roomDetails':
-  return (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-        <p className="text-gray-600">{currentQuestion.description}</p>
-      </div>
-
-      {taggedRooms.map((room) => (
-        <div key={room.id} className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <h3 className="text-lg font-medium mb-4">{room.roomName} Details</h3>
-          
+ case 'roomDetails':
+        return (
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">Style Preference</label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={roomDetails[room.id]?.style || ''}
-                onChange={(e) => {
-                  setRoomDetails(prev => ({
-                    ...prev,
-                    [room.id]: {
-                      ...prev[room.id],
-                      style: e.target.value
-                    }
-                  }));
-                }}
-              >
-                <option value="">Select a style</option>
-                <option value="modern">Modern</option>
-                <option value="traditional">Traditional</option>
-                <option value="contemporary">Contemporary</option>
-                <option value="minimalist">Minimalist</option>
-                <option value="industrial">Industrial</option>
-                <option value="scandinavian">Scandinavian</option>
-              </select>
-              {showValidation && !roomDetails[room.id]?.style && (
-                <p className="text-red-500 text-sm mt-1">Please select a style</p>
-              )}
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
+              <p className="text-gray-600">{currentQuestion.description}</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Color Scheme</label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={roomDetails[room.id]?.colorScheme || ''}
-                onChange={(e) => {
-                  setRoomDetails(prev => ({
-                    ...prev,
-                    [room.id]: {
-                      ...prev[room.id],
-                      colorScheme: e.target.value
-                    }
-                  }));
-                }}
-              >
-                <option value="">Select color scheme</option>
-                <option value="neutral">Neutral & Earthy</option>
-                <option value="warm">Warm & Cozy</option>
-                <option value="cool">Cool & Calm</option>
-                <option value="bold">Bold & Vibrant</option>
-                <option value="monochrome">Monochromatic</option>
-              </select>
-            </div>
-
-            {/* Current Room Photos */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Current Room Photos
-                <span className="block text-gray-500 text-xs mt-1">
-                  Upload photos showing how the room currently looks
-                </span>
-              </label>
-              <FileUpload
-                onUploadComplete={(urls) => {
-                  setRoomDetails(prev => ({
-                    ...prev,
-                    [room.id]: {
-                      ...prev[room.id],
-                      existingPhotos: urls
-                    }
-                  }));
-                }}
-                accept="image/jpeg,image/png,image/jpg"
-                uploadType="existing"
+            {rooms.map((room) => (
+              <RoomForm
+                key={room.id}
+                room={room}
+                onUpdate={handleUpdateRoom}
+                onRemove={() => handleRemoveRoom(room.id)}
                 projectFolder={projectFolder}
-                roomType={room.type}    // Add these
-                roomId={room.id}        // Add these
               />
-              {roomDetails[room.id]?.existingPhotos?.length > 0 && (
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {roomDetails[room.id].existingPhotos.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={url}
-                        alt={`Current room ${index + 1}`}
-                        className="w-full h-40 object-cover rounded-md"
-                      />
-                      <button
-                        onClick={() => {
-                          setRoomDetails(prev => ({
-                            ...prev,
-                            [room.id]: {
-                              ...prev[room.id],
-                              existingPhotos: prev[room.id].existingPhotos.filter((_, i) => i !== index)
-                            }
-                          }));
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full 
-                                 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+            ))}
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={handleAddRoom}
+                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                <span>Add Another Room</span>
+              </button>
             </div>
 
-            {/* Inspiration Photos */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Inspiration Photos
-                <span className="block text-gray-500 text-xs mt-1">
-                  Upload photos of designs you'd like to incorporate
-                </span>
-              </label>
-              <FileUpload
-                onUploadComplete={(urls) => {
-                  setRoomDetails(prev => ({
-                    ...prev,
-                    [room.id]: {
-                      ...prev[room.id],
-                      inspirationPhotos: urls
-                    }
-                  }));
-                }}
-                accept="image/jpeg,image/png,image/jpg"
-                uploadType="inspiration"
-                projectFolder={projectFolder}
-                roomType={room.type}    // Add these
-                roomId={room.id}        // Add these
-              />
-              {roomDetails[room.id]?.inspirationPhotos?.length > 0 && (
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {roomDetails[room.id].inspirationPhotos.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={url}
-                        alt={`Inspiration ${index + 1}`}
-                        className="w-full h-40 object-cover rounded-md"
-                      />
-                      <button
-                        onClick={() => {
-                          setRoomDetails(prev => ({
-                            ...prev,
-                            [room.id]: {
-                              ...prev[room.id],
-                              inspirationPhotos: prev[room.id].inspirationPhotos.filter((_, i) => i !== index)
-                            }
-                          }));
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full 
-                                 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Specific Requirements</label>
-              <textarea
-                className="w-full p-2 border rounded-md h-24"
-                placeholder="Describe any specific requirements or preferences for this room..."
-                value={roomDetails[room.id]?.description || ''}
-                onChange={(e) => {
-                  setRoomDetails(prev => ({
-                    ...prev,
-                    [room.id]: {
-                      ...prev[room.id],
-                      description: e.target.value
-                    }
-                  }));
-                }}
-              />
-              {showValidation && !roomDetails[room.id]?.description?.trim() && (
-                <p className="text-red-500 text-sm mt-1">Please provide room requirements</p>
-              )}
-            </div>
-
-            {/* Display dimensions from room tagging */}
-            <div className="mt-4 space-y-4">
-              <h4 className="text-sm font-medium">Room Dimensions</h4>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Square Footage</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border rounded-md"
-                  placeholder="Enter square footage"
-                  value={roomDetails[room.id]?.squareFootage || ''}
-                  onChange={(e) => {
-                    setRoomDetails(prev => ({
-                      ...prev,
-                      [room.id]: {
-                        ...prev[room.id],
-                        squareFootage: e.target.value
-                      }
-                    }));
-                  }}
-                />
-                {showValidation && !roomDetails[room.id]?.squareFootage && (
-                  <p className="text-red-500 text-sm mt-1">Please enter square footage</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Length (ft)</label>
-                  <input
-                    type="number"
-                    className="w-full p-2 border rounded-md"
-                    placeholder="Length"
-                    value={roomDetails[room.id]?.length || ''}
-                    onChange={(e) => {
-                      setRoomDetails(prev => ({
-                        ...prev,
-                        [room.id]: {
-                          ...prev[room.id],
-                          length: e.target.value
-                        }
-                      }));
-                    }}
-                  />
-                  {showValidation && !roomDetails[room.id]?.length && (
-                    <p className="text-red-500 text-sm mt-1">Required</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Width (ft)</label>
-                  <input
-                    type="number"
-                    className="w-full p-2 border rounded-md"
-                    placeholder="Width"
-                    value={roomDetails[room.id]?.width || ''}
-                    onChange={(e) => {
-                      setRoomDetails(prev => ({
-                        ...prev,
-                        [room.id]: {
-                          ...prev[room.id],
-                          width: e.target.value
-                        }
-                      }));
-                    }}
-                  />
-                  {showValidation && !roomDetails[room.id]?.width && (
-                    <p className="text-red-500 text-sm mt-1">Required</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Height (ft)</label>
-                  <input
-                    type="number"
-                    className="w-full p-2 border rounded-md"
-                    placeholder="Height"
-                    value={roomDetails[room.id]?.height || ''}
-                    onChange={(e) => {
-                      setRoomDetails(prev => ({
-                        ...prev,
-                        [room.id]: {
-                          ...prev[room.id],
-                          height: e.target.value
-                        }
-                      }));
-                    }}
-                  />
-                  {showValidation && !roomDetails[room.id]?.height && (
-                    <p className="text-red-500 text-sm mt-1">Required</p>
-                  )}
-                </div>
-              </div>
-            </div>
+            {showValidation && rooms.some(room => !room.type || !room.squareFootage) && (
+              <p className="text-red-500 text-sm mt-2">
+                Please fill in all required fields for each room
+              </p>
+            )}
           </div>
-        </div>
-      ))}
+        );
 
-      {taggedRooms.length === 0 && (
-        <div className="text-center p-8 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No rooms have been tagged yet. Please go back to the room tagging step.</p>
-        </div>
-      )}
-    </div>
-  );
 
 // In CreateDesign.js, add logging to track the floor plan URL:
  case 'floorPlanUpload':
@@ -1439,63 +1460,58 @@ case 'roomDetails':
 
   // ... rest of the component (navigation, dialogs, etc.) remains similar
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Save indicator */}
-        <div className="fixed bottom-4 right-4 flex items-center gap-2 text-sm bg-white px-4 py-2 rounded-lg shadow">
-          {isSaving ? (
-            <span className="text-gray-600">{t('createDesign.navigation.saving')}</span>
-          ) : lastSaved && (
-            <span className="text-gray-600">
-              {t('createDesign.navigation.lastSaved', { time: new Date(lastSaved).toLocaleTimeString() })}
-            </span>
-          )}
+return (
+  <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-3xl mx-auto">
+      {/* Progress bar */}
+      <div className="mb-8">
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-in-out"
+            style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
+          />
         </div>
+        <p className="text-sm text-gray-600 mt-2 text-center">
+          {t('createDesign.navigation.progress', { 
+            current: currentStep + 1, 
+            total: questions.length 
+          })}
+        </p>
+      </div>
 
-        {/* Progress bar */}
-        <div className="mb-8">
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-in-out"
-              style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
-            />
-          </div>
-          <p className="text-sm text-gray-600 mt-2 text-center">
-            {t('createDesign.navigation.progress', { 
-              current: currentStep + 1, 
-              total: questions.length 
-            })}
-          </p>
-        </div>
+      {renderCurrentStep()}
 
-        {renderCurrentStep()}
-
-        {/* Navigation buttons */}
-        <div className="flex justify-between mt-8">
-          {currentStep > 0 && (
-            <button
-              type="button"
-              onClick={() => setCurrentStep(prev => prev - 1)}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              {t('createDesign.navigation.back')}
-            </button>
-          )}
-          {questions[currentStep].type !== 'pricingReview' && (
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={!isCurrentStepValid()}
-              className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-            >
-              {t('createDesign.navigation.next')}
-            </button>
-          )}
-        </div>
+      {/* Navigation buttons */}
+      <div className="flex justify-between mt-8">
+        {currentStep > 0 && (
+          <button
+            type="button"
+            onClick={() => setCurrentStep(prev => prev - 1)}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            {t('createDesign.navigation.back')}
+          </button>
+        )}
+        
+        {/* Show next button for all steps except the final payment action in pricing review */}
+{/* Navigation buttons */}
+<div className="flex justify-between mt-8">
+  {/* Show next button for all steps except when we're on pricingReview */}
+  {questions[currentStep]?.type !== 'pricingReview' && (
+    <button
+      type="button"
+      onClick={handleNext}
+      disabled={!isCurrentStepValid()}
+      className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+    >
+      {t('createDesign.navigation.next')}
+    </button>
+  )}
+</div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default CreateDesign;
