@@ -39,18 +39,6 @@ const LandingPage = ({ onLogin }) => {
               {t('hero.viewDesignsStyle')}
             </button>
                       <div className="flex flex-col md:flex-row gap-4 md:space-x-4">
-            <button 
-              onClick={() => window.location.href='/services'}
-              className="px-8 py-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors text-lg w-full md:w-auto"
-            >
-              {t('hero.viewDesignsService')}
-            </button>
-            <button 
-              onClick={() => window.location.href='/showcase'}
-              className="px-8 py-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors text-lg w-full md:w-auto"
-            >
-              {t('hero.viewDesigns')}
-            </button>
           </div>
           </div>
         </div>
