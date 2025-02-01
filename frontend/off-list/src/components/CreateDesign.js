@@ -743,7 +743,7 @@ if (currentQuestion.type === 'rooms') {
         homeInfo,
         pricing: pricingData
       };
-      userEmail = localStorage.getItem('userName')
+      const userEmail = localStorage.getItem('username')
       const isPencildogsUser = userEmail.endsWith('@pencildogs.com');
       console.log("ispencildogsuser" + isPencildogsUser);
       // Set the deposit amount to 1 cent for Pencildogs users, otherwise use the calculated amount

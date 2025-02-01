@@ -18,6 +18,7 @@ const { v4: uuidv4 } = require('uuid');
 const { createHash } = require('crypto');
 const moment = require('moment');
 const { objPropertiesDefined } = require('./common');
+const stripe = require('stripe');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -771,8 +772,8 @@ app.post('/api/signup', async (req, res) => {
   return res.status(200).json({ result: 'Account creation successful.' });
 });
 
-/*
-app.post('/api/create-payment-session', authenticateToken, async (req, res) => {
+
+app.post('/api/create-payment-session', async (req, res) => {
   try {
     const { amount, projectDetails } = req.body;
 
@@ -796,8 +797,8 @@ app.post('/api/create-payment-session', authenticateToken, async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/design/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/design/create`,
+      success_url: `${process.env.FRONTEND_URL}/payment-success`,
+      cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
       metadata: {
         userId: req.user.id,
         projectDetails: JSON.stringify(projectDetails)
@@ -813,7 +814,7 @@ app.post('/api/create-payment-session', authenticateToken, async (req, res) => {
     });
   }
 });
-*/
+
 app.get('/api/properties', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM properties');
