@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { calculateTotalPrice } from './PricingCalculator';
 import { loadStripe } from '@stripe/stripe-js';
 import ReactPdfViewer from './PdfViewer';
+import { designStyleData } from '../data/designStyleData';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
@@ -26,23 +27,30 @@ const ROOM_TYPES = [
 
 const RoomForm = ({ room, onUpdate, onRemove, projectFolder }) => {
   const { t } = useTranslation();
-    const handleRoomPhotoUpload = (urls, type) => {
-      Console.log('Room photo upload:', {
-      urls,
-      type,
-      roomType: room.type,
-      roomId: room.id,
-      projectFolder
-    });
-    const updatedRoom = {
-      ...room,
-      [type === 'existing' ? 'existingPhotos' : 'inspirationPhotos']: [
-        ...(room[type === 'existing' ? 'existingPhotos' : 'inspirationPhotos'] || []),
-        ...urls
-      ]
-    };
-    onUpdate(updatedRoom);
+const handleRoomPhotoUpload = (urls, type) => {
+  console.log('Room photo upload:', {
+    urls,
+    type,
+    roomType: room.type,
+    roomId: room.id,
+    projectFolder
+  });
+
+  // Make sure we're getting the URLs
+  if (!Array.isArray(urls) || urls.length === 0) {
+    console.log('No URLs received');
+    return;
+  }
+
+  const existingPhotos = room.existingPhotos || [];
+  const updatedRoom = {
+    ...room,
+    existingPhotos: [...existingPhotos, ...urls]
   };
+
+  console.log('Updated room:', updatedRoom);
+  onUpdate(updatedRoom);
+};
   return (
     <div className="p-4 border rounded-lg mb-4 bg-white shadow-sm">
       <div className="flex justify-between items-center mb-4">
@@ -225,6 +233,7 @@ const CreateDesign = () => {
   const navigate = useNavigate();
   const [showError, setShowError] = useState({ show: false, message: '' });
   const [currentStep, setCurrentStep] = useState(0);
+  const [selectedDesignStyle, setSelectedDesignStyle] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
@@ -237,8 +246,10 @@ const CreateDesign = () => {
   const [selectedRoomType, setSelectedRoomType] = useState(null);
   const [taggedRooms, setTaggedRooms] = useState([]);
   const [roomCounter, setRoomCounter] = useState({});
+  const [isProjectInitialized, setIsProjectInitialized] = useState(false);
     const [selectedPDFPage, setSelectedPDFPage] = useState(null);
   const [pdfPreviewUrl, setPDFPreviewUrl] = useState(null);
+  const initializationAttempted = useRef(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
 const [rooms, setRooms] = useState([
   { 
@@ -374,49 +385,57 @@ const loadSavedProgress = async (projectId) => {
     }
   };
 
-// Add initializeProject function
-const initializeProject = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setShowError({
-        show: true,
-        message: 'Please log in to create a design'
-      });
-      return false;
-    }
-
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/projects/initialize`,
-      {},
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    setProjectId(response.data.projectId);
-    setProjectFolder(response.data.projectFolder);
-    console.log("project id is" + response.data.projectId);
-    return true;
-
-  } catch (error) {
-    console.error('Error initializing project:', error);
-    setShowError({
-      show: true,
-      message: error.response?.data?.message || 'Failed to initialize project'
-    });
-    return false;
-  }
-};
-
 // Modify useEffect to initialize project on component mount
-useEffect(() => {
-  initializeProject();
-}, []);
+  useEffect(() => {
+    const initializeProject = async () => {
+      // Check if we've already attempted initialization
+      if (initializationAttempted.current) {
+        return;
+      }
+      
+      // Mark that we've attempted initialization
+      initializationAttempted.current = true;
 
+      try {
+        const token = localStorage.getItem('token');
+        const userEmail = localStorage.getItem('username');
+
+        if (!token || !userEmail) {
+          setShowError({
+            show: true,
+            message: 'Please log in to create a design'
+          });
+          navigate('/login');
+          return;
+        }
+
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/projects/initialize`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        setProjectId(response.data.projectId);
+        setProjectFolder(response.data.projectFolder);
+        setIsProjectInitialized(true);
+        console.log("Project initialized with ID:", response.data.projectId);
+
+      } catch (error) {
+        console.error('Error initializing project:', error);
+        setShowError({
+          show: true,
+          message: error.response?.data?.message || 'Failed to initialize project'
+        });
+      }
+    };
+
+    initializeProject();
+  }, []); // Keep empty dependency array
 
 // Modify FileUpload usage to include project folder
 <FileUpload
@@ -488,7 +507,7 @@ useEffect(() => {
   const sendSupportEmail = async () => {
     try {
       const token = localStorage.getItem('token');
-      const userEmail = localStorage.getItem('userEmail'); // Make sure you store user's email during login
+      const userEmail = localStorage.getItem('userName'); // Make sure you store user's email during login
       
       const templateParams = {
         user_email: userEmail,
@@ -523,6 +542,11 @@ const questions = [
     label: 'Home Information',
     type: 'homeInfo',
     description: 'Tell us about your home'
+  },
+    {
+    label: 'Design Style',
+    type: 'designStyle',
+    description: 'Choose your preferred design style'
   },
   {
     label: t('createDesign.steps.floorPlan.title'),
@@ -610,7 +634,7 @@ if (currentQuestion.type === 'rooms') {
       length: parseFloat(room.length) || null,
       width: parseFloat(room.width) || null,
       height: parseFloat(room.height) || null,
-      existingPhotos: room.existingPhotos || []
+      existingPhotos: Array.isArray(room.existingPhotos) ? room.existingPhotos : []
     }));
     
     // Save progress before moving to next step
@@ -619,11 +643,13 @@ if (currentQuestion.type === 'rooms') {
       {
         currentStep,
         designType,
+        style: selectedDesignStyle,
         hasExistingFloorPlan,
         floorPlanUrls,
         rooms: formattedRooms, // Use formatted rooms data
         roomDetails,
         status: 'draft',
+        s3FolderPath: projectFolder,
         homeInfo: {
           totalBedrooms: parseInt(homeInfo.totalBedrooms) || null,
           totalBathrooms: parseFloat(homeInfo.totalBathrooms) || null,
@@ -680,6 +706,12 @@ if (currentQuestion.type === 'rooms') {
         homeInfo,
         pricing: pricingData
       };
+      userEmail = localStorage.getItem('userName')
+      const isPencildogsUser = userEmail.endsWith('@pencildogs.com');
+      console.log("ispencildogsuser" + isPencildogsUser);
+      // Set the deposit amount to 1 cent for Pencildogs users, otherwise use the calculated amount
+      pricingData = isPencildogsUser ? 0.01 : Math.round(pricingData.deposit * 100);
+
 
       // Create payment session with the calculated price
       const response = await axios.post(
@@ -991,6 +1023,60 @@ const isCurrentStepValid = () => {
     </div>
   );
 
+  case 'designStyle':
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
+      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Object.entries(designStyleData).map(([style, images]) => (
+          <div
+            key={style}
+            className={`cursor-pointer rounded-lg border-2 transition-all overflow-hidden ${
+              selectedDesignStyle === style
+                ? 'border-blue-600 ring-2 ring-blue-400'
+                : 'border-gray-200 hover:border-blue-300'
+            }`}
+            onClick={() => setSelectedDesignStyle(style)}
+          >
+            <div className="aspect-w-16 aspect-h-9 relative">
+              {/* Show the first image as preview */}
+              <img
+                src={images[0].location}
+                alt={`${style} style example`}
+                className="w-full h-48 object-cover"
+              />
+              {selectedDesignStyle === style && (
+                <div className="absolute top-2 right-2 bg-blue-600 text-white p-1 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <h3 className="font-medium text-lg mb-2">{style}</h3>
+              {/* Show additional images in a smaller grid */}
+              {images.length > 1 && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {images.slice(1).map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img.location}
+                      alt={`${style} additional example ${idx + 2}`}
+                      className="w-full h-16 object-cover rounded"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
       case 'rooms':
         return (
           <div className="space-y-4">
@@ -1117,7 +1203,16 @@ case 'pricingReview':
   console.log('reached pricing review');
   const squareFootage = parseFloat(homeInfo.totalSquareFootage);
   const ratePerSqFt = 1.00;
-  const totalPrice = squareFootage * ratePerSqFt;
+  let totalPrice = squareFootage * ratePerSqFt;
+  
+  const userEmail = localStorage.getItem('username')
+  const isPencildogsUser = userEmail.endsWith('@pencildogs.com');
+  console.log("ispencildogsuser" + isPencildogsUser);
+  if (isPencildogsUser) 
+  {
+    totalPrice = 0.01;
+  }
+    
   const deposit = totalPrice * 0.6;
   const remaining = totalPrice * 0.4;
   console.log(squareFootage);

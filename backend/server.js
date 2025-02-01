@@ -502,11 +502,13 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
   const { 
     currentStep,
     designType, 
+    style,
     hasExistingFloorPlan,
     floorPlanUrls,
     rooms,
     roomDetails,
     status,
+    s3FolderPath,
     homeInfo
   } = req.body;
 
@@ -540,7 +542,9 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
         bedrooms = $7,
         bathrooms = $8,
         squarefootage = $9,
-        last_modified_at = CURRENT_TIMESTAMP
+        last_modified_at = CURRENT_TIMESTAMP,
+        s3_folder_path = $12,
+        style = $13
       WHERE id = $10 AND user_id = $11
     `, [
       designType, 
@@ -553,7 +557,9 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
       parseFloat(homeInfo?.totalBathrooms) || null,
       parseInt(homeInfo?.totalSquareFootage) || null,
       projectId, 
-      userId
+      userId,
+      s3FolderPath,
+      style
     ]);
 
     // Update rooms if provided
@@ -1235,6 +1241,66 @@ const copyFileToProjectFolder = async (sourceUrl) => {
     if (client) {
       client.release();
     }
+  }
+});
+
+app.get('/api/projects/:projectId/s3photos', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    
+    // First get the project to get s3_folder_path
+    const project = await pool.query(
+      'SELECT s3_folder_path FROM projects WHERE id = $1',
+      [projectId]
+    );
+
+    if (!project.rows[0]?.s3_folder_path) {
+      return res.status(404).json({ error: 'Project folder not found' });
+    }
+
+    const s3FolderPath = project.rows[0].s3_folder_path;
+    console.log('S3 folder path:', s3FolderPath);
+
+    // List objects in the S3 folder
+    const s3Objects = await s3.listObjectsV2({
+      Bucket: 'designimages',
+      Prefix: s3FolderPath
+    }).promise();
+
+    // Organize photos by room type
+    const photosByRoom = {};
+    
+    s3Objects.Contents.forEach(object => {
+      // Skip if it's not an image
+      if (!object.Key.match(/\.(jpg|jpeg|png)$/i)) return;
+
+      // Extract room type from filename
+      const key = object.Key;
+      const keyParts = key.split('-');
+      const roomTypePart = keyParts.find(part => part.startsWith('room'));
+      let roomType = 'other';
+
+      if (roomTypePart) {
+        const matches = roomTypePart.match(/room-(\d+)-([^-]+)/);
+        if (matches && matches[2]) {
+          roomType = matches[2];
+        }
+      }
+
+      if (!photosByRoom[roomType]) {
+        photosByRoom[roomType] = [];
+      }
+
+      // Generate the full URL for the image
+      const photoUrl = `https://designimages.sfo3.digitaloceanspaces.com/${object.Key}`;
+      photosByRoom[roomType].push(photoUrl);
+    });
+
+    console.log('Organized photos:', photosByRoom);
+    res.json({ photos: photosByRoom });
+  } catch (error) {
+    console.error('Error fetching S3 photos:', error);
+    res.status(500).json({ error: 'Failed to fetch photos' });
   }
 });
 
