@@ -13,6 +13,61 @@ import { designStyleData } from '../data/designStyleData';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
+
+const handlePayment = async (amountInCents, projectDetails) => {
+  try {
+    // Validate Stripe is loaded
+    const stripe = await stripePromise;
+    if (!stripe) {
+      throw new Error('Failed to initialize Stripe');
+    }
+
+    console.log('Creating payment session...', {
+      amount: amountInCents,
+      projectDetails: {
+        ...projectDetails,
+        sensitive: '[REDACTED]'
+      }
+    });
+
+    // Create Stripe session
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL}/api/create-payment-session`,
+      {
+        amount: amountInCents,
+        projectDetails
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const { sessionId } = response.data;
+    if (!sessionId) {
+      throw new Error('No session ID received from server');
+    }
+
+    console.log('Redirecting to checkout...');
+    
+    // Redirect to checkout
+    const { error } = await stripe.redirectToCheckout({
+      sessionId
+    });
+
+    if (error) {
+      console.error('Stripe redirect error:', error);
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Payment flow error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Payment processing failed');
+  }
+};
+
 const ROOM_TYPES = [
   { id: 'bedroom', label: 'Bedroom', multiple: true },
   { id: 'kitchen', label: 'Kitchen', multiple: false },
@@ -566,6 +621,7 @@ const loadSavedProgress = async (projectId) => {
   };
 
 // Modified questions array definition
+// Replace the existing questions array in CreateDesign.js
 const questions = [
   {
     label: t('createDesign.steps.designType.title'),
@@ -577,7 +633,7 @@ const questions = [
     type: 'homeInfo',
     description: 'Tell us about your home'
   },
-    {
+  {
     label: 'Design Style',
     type: 'designStyle',
     description: 'Choose your preferred design style'
@@ -587,12 +643,13 @@ const questions = [
     type: 'floorPlanChoice',
     description: t('createDesign.steps.floorPlan.description')
   },
-  {
-    label: t('createDesign.floorplan.current'),
-    type: 'floorPlanUpload',
-    description: t('createDesign.floorplan.currentDesc'),
-    show: hasExistingFloorPlan === true
-  },
+  ...(hasExistingFloorPlan === true ? [
+    {
+      label: t('createDesign.floorplan.current'),
+      type: 'floorPlanUpload',
+      description: t('createDesign.floorplan.currentDesc')
+    }
+  ] : []),
   {
     label: t('createDesign.steps.roomDetails.title'),
     type: 'rooms',
@@ -601,13 +658,16 @@ const questions = [
   {
     label: t('createDesign.steps.pricing.title'),
     type: 'pricingReview',
-    description: t('createDesign.steps.pricing.description'),
-    show: true // Explicitly show pricing review step
+    description: t('createDesign.steps.pricing.description')
   }
-].filter(q => !q.hasOwnProperty('show') || q.show === true); // Only keep questions that should be shown
+].filter(Boolean); // Remove any undefined entries
 
-// Add logging to track filtered questions
-console.log('Filtered questions:', questions);
+// Add a debug log to track the questions array
+console.log('Current questions:', {
+  total: questions.length,
+  types: questions.map(q => q.type),
+  hasExistingFloorPlan
+});
 
 const handleNext = async () => {
   console.log("handlenext triggered");
@@ -717,85 +777,47 @@ if (currentQuestion.type === 'rooms') {
 
   // If we're on the pricing review step, redirect to Stripe
   if (currentQuestion.type === 'pricingReview') {
-    console.log("reached pricing review");
-    try {
-      setShowError({ show: false, message: '' });
-      
-      // Calculate total price based on total square footage
-      const squareFootage = parseFloat(homeInfo.totalSquareFootage);
-      const ratePerSqFt = 1.00; // $1 per square foot
-      const totalPrice = squareFootage * ratePerSqFt;
-
-      let pricingData = {
-        squareFootage,
-        ratePerSqFt,
-        total: totalPrice,
-        deposit: totalPrice * 0.6, // 60% deposit
-        remaining: totalPrice * 0.4 // 40% remaining
-      };
-
-      console.log('Calculated pricing data:', pricingData);
-
-      const projectDetails = {
-        projectId,
-        designType,
-        rooms,
-        homeInfo,
-        pricing: pricingData
-      };
-      const userEmail = localStorage.getItem('username')
-      const isPencildogsUser = userEmail.endsWith('@pencildogs.com');
-      console.log("ispencildogsuser" + isPencildogsUser);
-      // Set the deposit amount to 1 cent for Pencildogs users, otherwise use the calculated amount
-      pricingData = isPencildogsUser ? 0.01 : Math.round(pricingData.deposit * 100);
-
-
-      // Create payment session with the calculated price
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/create-payment-session`,
-        {
-          amount: Math.round(pricingData.deposit * 100), // Convert deposit amount to cents
-          projectDetails
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      console.log('Payment session response:', response.data);
-
-      const { sessionId } = response.data;
-      if (!sessionId) {
-        throw new Error('No session ID received from server');
-      }
-
-      // Initialize Stripe and redirect
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Failed to initialize Stripe');
-      }
-
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: sessionId
-      });
-
-      if (error) {
-        console.error('Stripe redirect error:', error);
-        throw new Error(error.message);
-      }
-
-    } catch (error) {
-      console.error('Payment flow error:', error);
-      setShowError({
-        show: true,
-        message: error.message || 'Failed to process payment. Please try again.'
-      });
+  try {
+    setShowError({ show: false, message: '' });
+    
+    // Calculate total price based on total square footage
+    const squareFootage = parseFloat(homeInfo.totalSquareFootage);
+    if (!squareFootage || isNaN(squareFootage)) {
+      throw new Error('Invalid square footage');
     }
-    return;
+
+    const ratePerSqFt = 1.00; // $1 per square foot
+    const totalPrice = squareFootage * ratePerSqFt;
+    const depositAmount = totalPrice * 0.6; // 60% deposit
+
+    const userEmail = localStorage.getItem('username');
+    const isPencildogsUser = userEmail?.endsWith('@pencildogs.com');
+    
+    // Convert to cents and ensure it's a valid integer
+    const amountInCents = isPencildogsUser 
+      ? 50 // 50 cent for Pencildogs users
+      : Math.round(depositAmount * 100); // Normal price in cents
+
+    await handlePayment(amountInCents, {
+      projectId,
+      rooms,
+      homeInfo,
+      pricing: {
+        totalPrice,
+        deposit: depositAmount,
+        remaining: totalPrice * 0.4
+      }
+    });
+
+  } catch (error) {
+    console.error('Payment flow error:', error);
+    setShowError({
+      show: true,
+      message: error.message
+    });
   }
+  return;
+}
 
   // For non-payment steps, proceed normally
   setCurrentStep(prev => prev + 1);
@@ -1253,7 +1275,7 @@ case 'floorPlanChoice':
               });
               
               const emailSent = await sendSupportEmail();
-              
+              /*
               if (emailSent) {
                 setShowError({
                   show: true,
@@ -1276,6 +1298,7 @@ case 'floorPlanChoice':
                   setCurrentStep(prev => prev + 1);
                 }, 3000);
               }
+                */
             }}
           >
             <h3 className="text-lg font-medium mb-2">No, I need help creating one</h3>
@@ -1321,7 +1344,7 @@ case 'pricingReview':
   console.log("ispencildogsuser" + isPencildogsUser);
   if (isPencildogsUser) 
   {
-    totalPrice = 0.01;
+    totalPrice = 1;
   }
     
   const deposit = totalPrice * 0.6;

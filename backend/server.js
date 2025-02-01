@@ -18,7 +18,7 @@ const { v4: uuidv4 } = require('uuid');
 const { createHash } = require('crypto');
 const moment = require('moment');
 const { objPropertiesDefined } = require('./common');
-const stripe = require('stripe');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -772,10 +772,29 @@ app.post('/api/signup', async (req, res) => {
   return res.status(200).json({ result: 'Account creation successful.' });
 });
 
-
 app.post('/api/create-payment-session', async (req, res) => {
   try {
     const { amount, projectDetails } = req.body;
+    
+    // Validate environment variables
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('Stripe secret key is not configured');
+    }
+    
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = frontendUrl.replace(/\/$/, ''); // Remove trailing slash if present
+
+    // Validate amount
+    const unitAmount = Math.round(parseFloat(amount));
+    if (!unitAmount || isNaN(unitAmount) || unitAmount <= 0) {
+      throw new Error('Invalid amount provided');
+    }
+
+    console.log('Creating Stripe session...', {
+      amount: unitAmount,
+      success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${baseUrl}/payment-cancel`
+    });
 
     // Create a Stripe session
     const session = await stripe.checkout.sessions.create({
@@ -786,31 +805,113 @@ app.post('/api/create-payment-session', async (req, res) => {
             currency: 'usd',
             product_data: {
               name: 'Interior Design Project',
-              description: `Design service for ${projectDetails.rooms.length} rooms`,
-              metadata: {
-                projectId: projectDetails.id // If you have a project ID
-              }
+              description: `Design service for ${projectDetails.rooms?.length || 0} rooms`,
             },
-            unit_amount: Math.round(amount * 100), // Convert to cents
+            unit_amount: unitAmount,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/payment-success`,
-      cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
+      success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/payment-cancel`,
       metadata: {
-        userId: req.user.id,
-        projectDetails: JSON.stringify(projectDetails)
+        projectId: projectDetails.projectId,
+        projectData: JSON.stringify({
+          rooms: projectDetails.rooms?.length || 0,
+          squareFootage: projectDetails.homeInfo?.totalSquareFootage || 0
+        })
       }
     });
 
-    res.json({ sessionId: session.id });
+    console.log('Stripe session created successfully:', {
+      sessionId: session.id,
+      url: session.url
+    });
+
+    res.json({ 
+      sessionId: session.id,
+      url: session.url // Include the session URL for debugging
+    });
+
   } catch (error) {
     console.error('Stripe session creation failed:', error);
     res.status(500).json({ 
       error: 'Failed to create payment session',
-      message: error.message 
+      message: error.raw?.message || error.message,
+      details: {
+        frontendUrl: process.env.FRONTEND_URL,
+        stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
+        error: error.message
+      }
+    });
+  }
+});
+
+// In server.js - Update or add this endpoint
+app.get('/api/verify-payment/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      throw new Error('No authorization token provided');
+    }
+
+    // Verify session with Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      throw new Error('No session found');
+    }
+
+    // Check payment status
+    if (session.payment_status !== 'paid') {
+      throw new Error('Payment not completed');
+    }
+
+    // Get project details from session metadata
+    const projectId = session.metadata.projectId;
+    
+    if (!projectId) {
+      throw new Error('No project ID found in session metadata');
+    }
+
+    // Update project status in database
+    await pool.query(`
+      UPDATE projects 
+      SET 
+        payment_status = 1,
+        status = 'in_progress',
+        deposit_paid = true,
+        deposit_paid_at = CURRENT_TIMESTAMP,
+        last_modified_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, payment_status, status
+    `, [projectId]);
+
+    // Log successful payment verification
+    console.log('Payment verified and project updated:', {
+      projectId,
+      sessionId,
+      payment_status: session.payment_status
+    });
+
+    res.json({
+      success: true,
+      session: {
+        id: session.id,
+        payment_status: session.payment_status,
+        amount_total: session.amount_total,
+        projectId
+      }
+    });
+
+  } catch (error) {
+    console.error('Payment verification failed:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 });
