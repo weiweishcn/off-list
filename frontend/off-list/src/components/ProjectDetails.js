@@ -244,7 +244,7 @@ const renderRoomPhotos = (room) => {
         {/* Project Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-2xl font-bold mb-2">
-            {t('projectDetails.title', { id: project.id })}
+            {('Project ' + project.id )}
           </h1>
           <div className="flex items-center space-x-4 text-gray-600">
             <p>{t('projectDetails.status')}{project.status}</p>

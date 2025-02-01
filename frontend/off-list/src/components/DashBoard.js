@@ -25,6 +25,7 @@ function Dashboard() {
     if (storedUsername) {
       setUsername(storedUsername);
     }
+    console.log(storedUsername);
 
     // Fetch subscription status
     const checkSubscription = async () => {
@@ -104,6 +105,7 @@ function Dashboard() {
       </div>
     );
   }
+  console.log(username)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -113,7 +115,7 @@ function Dashboard() {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">
-                {t('dashboard.welcome', { username })}
+                {(t('dashboard.welcome') +  username)}
               </h1>
             </div>
             <button
@@ -224,7 +226,7 @@ function Dashboard() {
                           request.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                           'bg-green-100 text-green-800'
                         }`}>
-                          {t(`dashboard.designRequests.status.${request.status.toLowerCase()}`)}
+                          {request.status.toLowerCase()}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.type}</td>

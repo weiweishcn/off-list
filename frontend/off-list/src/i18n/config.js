@@ -19,7 +19,7 @@ const resources = {
       },
 
     dashboard: {
-        welcome: 'Welcome, {username}',
+        welcome: 'Welcome, ',
         title: 'Designer Dashboard',
         createRequest: {
           title: 'Create Design Request (per room)',
@@ -53,6 +53,10 @@ const resources = {
             completed: 'Completed'
           }
         },
+        actions: {
+          logout: 'log out',
+          viewDetails: 'View project Details'
+        }
     },
 
         createDesign: {
@@ -295,7 +299,7 @@ const resources = {
         navigation: {
           backToDashboard: '← Back to Dashboard'
         },
-        title: 'Project #{id}',
+        title: 'Project',
         status: 'Status: ',
         created: 'Created: ',
         floorPlans: {
@@ -376,7 +380,7 @@ const resources = {
         viewFloorPlan: '查看平面图'
       },
 
-           // Project Details
+    // Project Details
       projectDetails: {
         loading: '加载中...',
         notFound: {

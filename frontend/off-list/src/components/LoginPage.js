@@ -32,6 +32,7 @@ const LoginPage = () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('username', variables.email);
       localStorage.setItem('userType', data.userType);
+  
 
       console.log(data.userType);
       switch (data.userType) {
