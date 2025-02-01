@@ -544,7 +544,8 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
         squarefootage = $9,
         last_modified_at = CURRENT_TIMESTAMP,
         s3_folder_path = $12,
-        style = $13
+        style = $13,
+        photo_requested = $14
       WHERE id = $10 AND user_id = $11
     `, [
       designType, 
@@ -559,7 +560,8 @@ app.put('/api/projects/:projectId/progress', async (req, res) => {
       projectId, 
       userId,
       s3FolderPath,
-      style
+      style,
+      parseInt(homeInfo?.photoRequested) || null
     ]);
 
     // Update rooms if provided

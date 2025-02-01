@@ -149,6 +149,10 @@ const resources = {
         inspirationDesc: 'Upload photos of designs you\'d like to incorporate'
       }
     },
+    floorplan: {
+        current: 'Upload your current floor plans',
+        currentDesc: 'pdf or image'
+    },
     navigation: {
       back: 'Back',
       next: 'Next',

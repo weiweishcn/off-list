@@ -20,6 +20,8 @@ import AdminDashboard from './components/AdminDashboard';
 import ProjectDetails from './components/ProjectDetails';
 import DesignerProjectDetails from './components/DesignerProjectDetails';
 import Navbar from './components/Navbar';
+import { PaymentSuccess, PaymentCancel } from './components/PaymentSuccess';
+
 
 // Import i18n configuration
 import './i18n/config';
@@ -66,7 +68,8 @@ function App() {
                 <Route path="/designer" element={<Layout><DesignerList /></Layout>} />
                 <Route path="/contact" element={<Layout><ContactForm /></Layout>} />
                 <Route path="/contactus" element={<Layout><ContactUs /></Layout>} />
-                
+                <Route path="/payment-success" element={<Layout><PaymentSuccess /></Layout>} />
+                <Route path="/pyment-cancel" element={<Layout><PaymentCancel /></Layout>} />
                 {/* Routes that shouldn't have the navbar (like auth pages and dashboards) */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<Signup />} />

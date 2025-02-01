@@ -264,6 +264,39 @@ const [rooms, setRooms] = useState([
   }
 ]);
 
+  // Add this new state for image indices
+  const [styleImageIndices, setStyleImageIndices] = useState(() => 
+    Object.keys(designStyleData).reduce((acc, style) => {
+      acc[style] = 0;
+      return acc;
+    }, {})
+  );
+
+  // Add these new handler functions at the component level
+  const handlePrevImage = (e, style) => {
+    e.stopPropagation();
+    setStyleImageIndices(prev => ({
+      ...prev,
+      [style]: prev[style] === 0 ? designStyleData[style].length - 1 : prev[style] - 1
+    }));
+  };
+
+  const handleNextImage = (e, style) => {
+    e.stopPropagation();
+    setStyleImageIndices(prev => ({
+      ...prev,
+      [style]: prev[style] === designStyleData[style].length - 1 ? 0 : prev[style] + 1
+    }));
+  };
+
+  const handleDotClick = (e, style, index) => {
+    e.stopPropagation();
+    setStyleImageIndices(prev => ({
+      ...prev,
+      [style]: index
+    }));
+  };
+
 const handleAddRoom = () => {
   const newRoom = { 
     id: Date.now(), 
@@ -280,7 +313,8 @@ const handleAddRoom = () => {
 const [homeInfo, setHomeInfo] = useState({
   totalBedrooms: '',
   totalBathrooms: '',
-  totalSquareFootage: ''
+  totalSquareFootage: '',
+  renderPhotos: ''
 });
   const [roomTags, setRoomTags] = useState([]);
 
@@ -554,9 +588,9 @@ const questions = [
     description: t('createDesign.steps.floorPlan.description')
   },
   {
-    label: t('roomForm.upload.current'),
+    label: t('createDesign.floorplan.current'),
     type: 'floorPlanUpload',
-    description: t('roomForm.upload.currentDesc'),
+    description: t('createDesign.floorplan.currentDesc'),
     show: hasExistingFloorPlan === true
   },
   {
@@ -619,15 +653,19 @@ const handleNext = async () => {
     }
   }
 
-    // If we're moving from roomDetails to pricingReview, create the project
-// In the handleNext function in CreateDesign.js, update the project progress data formatting:
-
+// Inside handleNext function where rooms are saved
 if (currentQuestion.type === 'rooms') {
   try {
     const token = localStorage.getItem('token');
     
-    // Format rooms data properly for the backend
-    const formattedRooms = rooms.map(room => ({
+    // Filter out rooms with no data entered
+    const roomsWithData = rooms.filter(room => 
+      room.type || room.squareFootage || room.length || room.width || room.height || 
+      (Array.isArray(room.existingPhotos) && room.existingPhotos.length > 0)
+    );
+    
+    // Format rooms data properly for the backend, but only for rooms that have data
+    const formattedRooms = roomsWithData.map(room => ({
       id: room.id,
       type: room.type,
       squareFootage: parseFloat(room.squareFootage) || null,
@@ -638,6 +676,7 @@ if (currentQuestion.type === 'rooms') {
     }));
     
     // Save progress before moving to next step
+    console.log('Saving progress with rooms:', formattedRooms);
     await axios.put(
       `${import.meta.env.VITE_API_URL}/api/projects/${projectId}/progress`,
       {
@@ -646,14 +685,15 @@ if (currentQuestion.type === 'rooms') {
         style: selectedDesignStyle,
         hasExistingFloorPlan,
         floorPlanUrls,
-        rooms: formattedRooms, // Use formatted rooms data
+        rooms: formattedRooms, // Only save rooms with data
         roomDetails,
         status: 'draft',
         s3FolderPath: projectFolder,
         homeInfo: {
           totalBedrooms: parseInt(homeInfo.totalBedrooms) || null,
           totalBathrooms: parseFloat(homeInfo.totalBathrooms) || null,
-          totalSquareFootage: parseInt(homeInfo.totalSquareFootage) || null
+          totalSquareFootage: parseInt(homeInfo.totalSquareFootage) || null,
+          photoRequested: parseInt(homeInfo.renderPhotos) || null,
         }
       },
       {
@@ -664,10 +704,7 @@ if (currentQuestion.type === 'rooms') {
       }
     );
 
-    console.log('Progress saved with rooms:', formattedRooms);
-    
-    // After successful save, proceed to next step
-    //setCurrentStep(prev => prev + 1);
+    console.log('Progress saved successfully');
     setShowValidation(false);
   } catch (error) {
     console.error('Error saving progress:', error);
@@ -798,22 +835,30 @@ const isCurrentStepValid = () => {
       return !hasExistingFloorPlan || floorPlanUrls.length > 0;
       
     case 'rooms':
-      // Log each room's validation state
-      const roomValidations = rooms.map(room => ({
+      // If there are no rooms or no room data entered, just return true
+      if (!rooms.length || !rooms.some(room => room.type || room.squareFootage)) {
+        console.log('No room data entered - allowing progression');
+        return true;
+      }
+      
+      // Only validate rooms that have any data entered
+      const roomsWithData = rooms.filter(room => 
+        room.type || room.squareFootage || room.length || room.width || room.height
+      );
+      
+      // Log validation state for debugging
+      const roomValidations = roomsWithData.map(room => ({
         id: room.id,
         type: room.type,
         hasSquareFootage: Boolean(room.squareFootage),
-        hasPhotos: Boolean(room.existingPhotos?.length > 0),
-        isValid: Boolean(
-          room.type && 
-          room.squareFootage  
-        )
+        isValid: Boolean(room.type && room.squareFootage)
       }));
       console.log('Rooms validation:', roomValidations);
-      return rooms.every(room => 
-        room.type && 
-        room.squareFootage 
-      );
+      
+      // If any room has data, make sure it's complete
+      return roomsWithData.length === 0 || 
+             roomsWithData.every(room => room.type && room.squareFootage);
+      
       
     default:
       console.log('Default validation - returning true');
@@ -958,7 +1003,9 @@ const isCurrentStepValid = () => {
           </div>
         );
 
-        case 'homeInfo':
+// ... earlier code remains the same
+
+case 'homeInfo':
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
@@ -1019,11 +1066,35 @@ const isCurrentStepValid = () => {
             required
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Number of Render Photos Needed *
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              min="1"
+              value={homeInfo.renderPhotos}
+              onChange={(e) => setHomeInfo(prev => ({
+                ...prev,
+                renderPhotos: e.target.value
+              }))}
+              className="w-full p-2 border rounded-md"
+              placeholder="Enter number of render photos needed"
+              required
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              How many different views or angles would you like us to render?
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 
-  case 'designStyle':
+case 'designStyle':
+  // Create a state object to track current image index for each style
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
@@ -1040,36 +1111,76 @@ const isCurrentStepValid = () => {
             }`}
             onClick={() => setSelectedDesignStyle(style)}
           >
-            <div className="aspect-w-16 aspect-h-9 relative">
-              {/* Show the first image as preview */}
-              <img
-                src={images[0].location}
-                alt={`${style} style example`}
-                className="w-full h-48 object-cover"
-              />
-              {selectedDesignStyle === style && (
-                <div className="absolute top-2 right-2 bg-blue-600 text-white p-1 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+            <div className="relative">
+              {/* Main Image Display */}
+              <div className="relative w-full h-48 overflow-hidden">
+                <img
+                  src={images[styleImageIndices[style]].location}
+                  alt={`${style} style example ${styleImageIndices[style] + 1}`}
+                  className="w-full h-full object-cover transition-opacity duration-300"
+                />
+                
+                {/* Navigation Arrows */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => handlePrevImage(e, style)}
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-full p-2 transition-all"
+                      aria-label="Previous image"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => handleNextImage(e, style)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-full p-2 transition-all"
+                      aria-label="Next image"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+
+                {/* Image Counter */}
+                <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
+                  {styleImageIndices[style] + 1} / {images.length}
                 </div>
-              )}
-            </div>
-            <div className="p-4">
-              <h3 className="font-medium text-lg mb-2">{style}</h3>
-              {/* Show additional images in a smaller grid */}
-              {images.length > 1 && (
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {images.slice(1).map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={img.location}
-                      alt={`${style} additional example ${idx + 2}`}
-                      className="w-full h-16 object-cover rounded"
-                    />
-                  ))}
-                </div>
-              )}
+
+                {/* Selection Check Mark */}
+                {selectedDesignStyle === style && (
+                  <div className="absolute top-2 right-2 bg-blue-600 text-white p-1 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+
+              {/* Style Name and Navigation Dots */}
+              <div className="p-4">
+                <h3 className="font-medium text-lg mb-2">{style}</h3>
+                
+                {/* Navigation Dots */}
+                {images.length > 1 && (
+                  <div className="flex justify-center space-x-2 mt-2">
+                    {images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => handleDotClick(e, style, index)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          styleImageIndices[style] === index 
+                            ? 'bg-blue-600' 
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                        aria-label={`Go to image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -1567,10 +1678,7 @@ return (
           />
         </div>
         <p className="text-sm text-gray-600 mt-2 text-center">
-          {t('createDesign.navigation.progress', { 
-            current: currentStep + 1, 
-            total: questions.length 
-          })}
+          Step {currentStep + 1} of {questions.length}
         </p>
       </div>
 
@@ -1596,7 +1704,7 @@ return (
     <button
       type="button"
       onClick={handleNext}
-      disabled={!isCurrentStepValid()}
+      disabled={false}
       className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
     >
       {t('createDesign.navigation.next')}
