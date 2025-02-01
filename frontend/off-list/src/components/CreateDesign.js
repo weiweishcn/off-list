@@ -689,7 +689,7 @@ if (currentQuestion.type === 'rooms') {
       const ratePerSqFt = 1.00; // $1 per square foot
       const totalPrice = squareFootage * ratePerSqFt;
 
-      const pricingData = {
+      let pricingData = {
         squareFootage,
         ratePerSqFt,
         total: totalPrice,
