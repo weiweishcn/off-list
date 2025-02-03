@@ -25,7 +25,7 @@ export const designStyleData = {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design1/01.jpeg"
     }
   ],
-  "Mid-Century Modern Stlye": [
+  "MidModern": [
     {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design1/01.jpeg"
     },

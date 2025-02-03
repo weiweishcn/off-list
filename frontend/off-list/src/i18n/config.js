@@ -61,7 +61,96 @@ const resources = {
     },
 
         createDesign: {
+            floorPlan: {
+        choice: {
+          yes: {
+            title: 'Yes, I have a floor plan',
+            description: 'I can provide an existing floor plan of my space'
+          },
+          no: {
+            title: 'No, I need help creating one',
+            description: 'Request assistance from our team to create a floor plan'
+          },
+          loading: 'Sending request to our support team...',
+          success: "We've notified our support team about your floor plan request. They'll contact you soon to assist with creating your floor plan. Let's continue with your room details.",
+          error: "We couldn't send the notification automatically. Please email support@pencildogs.com directly for assistance with your floor plan. Let's continue with your room details."
+        },
+        upload: {
+          success: 'Floor plan uploaded successfully!'
+        }
+      },
+      pricing: {
+        breakdown: {
+          title: 'Project Cost Breakdown',
+          squareFootage: {
+            title: 'Total Square Footage',
+            rate: '{{footage}} sq ft × ${{rate}}/sq ft'
+          },
+          total: {
+            title: 'Total Project Cost',
+            description: 'Based on total square footage'
+          },
+          deposit: {
+            title: 'Required Deposit (60%)',
+            description: 'Due to start your project'
+          },
+          remaining: {
+            title: 'Remaining Balance (40%)',
+            description: 'Due upon design completion'
+          }
+        },
+        actions: {
+          pay: 'Pay Deposit and Start Project',
+          saveLater: 'Save Project and Pay Later'
+        },
+        notes: {
+          title: 'Important Notes:',
+          items: [
+            'Pricing is calculated based on total home square footage',
+            'Current rate: $1.00 per square foot',
+            '60% deposit is required to begin the project',
+            'Remaining 40% will be due upon design completion',
+            'You can save your project now and pay the deposit later',
+            'Design work will not begin until the deposit is paid'
+          ]
+        }
+      },
+            // English
+  designStyles: {
+    American: 'American',
+    European: 'European',
+    MidModern: 'Modern',
+    'Mid-Century Modern': 'Mid-Century Modern',
+    Artsy: 'Artsy',
+    Minimalist: 'Minimalist',  // You already had this but including for completeness
+  },
     steps: {
+        designStyle: {
+          title: 'Design Style',
+          description: 'Choose your preferred design style',
+          navigation: {
+            previous: 'Previous image',
+            next: 'Next image',
+            goToImage: 'Go to image {{number}}',
+            imageCounter: '{{current}} / {{total}}'
+          },
+          styleExample: '{{style}} style example {{number}}',
+          selected: 'Style selected'
+        },
+                homeInfo: {
+          title: 'Home Information',
+          description: 'Tell us about your home',
+          totalBedrooms: 'Number of Bedrooms',
+          totalBedroomsPlaceholder: 'Enter number of bedrooms',
+          totalBathrooms: 'Number of Bathrooms',
+          totalBathroomsPlaceholder: 'Enter number of bathrooms',
+          totalSquareFootage: 'Total Square Footage',
+          totalSquareFootagePlaceholder: 'Enter total square footage',
+          renderPhotos: 'Number of Render Photos Needed',
+          renderPhotosDescription: 'How many different views or angles would you like us to render?',
+          renderPhotosPlaceholder: 'Enter number of render photos needed',
+          required: 'Required'
+        },
          roomTagging: {
     title: 'Tag Rooms on Floor Plan',
     description: 'Click on your floor plan to mark each room location',
@@ -470,8 +559,105 @@ const resources = {
       },
 
     createDesign: {
+         floorPlan: {
+        choice: {
+          yes: {
+            title: '是的，我有平面图',
+            description: '我可以提供现有空间的平面图'
+          },
+          no: {
+            title: '没有，我需要帮助创建',
+            description: '请求我们的团队协助创建平面图'
+          },
+          loading: '正在发送请求给我们的支持团队...',
+          success: '我们已通知支持团队关于您的平面图请求。他们将很快联系您，协助创建平面图。让我们继续完善房间细节。',
+          error: '我们无法自动发送通知。请直接发送邮件至support@pencildogs.com获取平面图帮助。让我们继续完善房间细节。'
+        },
+        upload: {
+          success: '平面图上传成功！'
+        }
+      },
+      pricing: {
+        breakdown: {
+          title: '项目费用明细',
+          squareFootage: {
+            title: '总面积',
+            rate: '{{footage}} 平方英尺 × ${{rate}}/平方英尺'
+          },
+          total: {
+            title: '项目总费用',
+            description: '基于总面积计算'
+          },
+          deposit: {
+            title: '需要预付款 (60%)',
+            description: '开始项目时支付'
+          },
+          remaining: {
+            title: '余额 (40%)',
+            description: '设计完成时支付'
+          }
+        },
+        actions: {
+          pay: '支付预付款并开始项目',
+          saveLater: '保存项目稍后支付'
+        },
+        notes: {
+          title: '重要说明：',
+          items: [
+            '价格根据房屋总面积计算',
+            '当前费率：每平方英尺 $1.00',
+            '需支付 60% 预付款才能开始项目',
+            '剩余 40% 在设计完成后支付',
+            '您可以现在保存项目并稍后支付预付款',
+            '设计工作将在收到预付款后开始'
+          ]
+        }
+      },
+        designStyles: {
+                American: '美式',
+    European: '欧式',
+    Modern: '现代',
+    'Mid-Century Modern': '中世纪现代',
+    Artsy: '艺术',
+  MidModern: '中世纪现代',
+  contemporary: '当代',
+  traditional: '传统',
+  transitional: '过渡',
+  scandinavian: '北欧',
+  industrial: '工业',
+  Minialist: '极简',
+  coastal: '海岸',
+  bohemian: '波西米亚',
+  farmhouse: '田园'
+},
         // In config.js, add under createDesign section
     steps: {
+                designStyle: {
+          title: '设计风格',
+          description: '选择您喜欢的设计风格',
+          navigation: {
+            previous: '上一张图片',
+            next: '下一张图片',
+            goToImage: '转到图片 {{number}}',
+            imageCounter: '{{current}} / {{total}}'
+          },
+          styleExample: '{{style}}风格示例 {{number}}',
+          selected: '已选择此风格'
+        },
+                homeInfo: {
+          title: '房屋信息',
+          description: '请告诉我们关于您房屋的信息',
+          totalBedrooms: '卧室数量',
+          totalBedroomsPlaceholder: '请输入卧室数量',
+          totalBathrooms: '浴室数量',
+          totalBathroomsPlaceholder: '请输入浴室数量',
+          totalSquareFootage: '总面积',
+          totalSquareFootagePlaceholder: '请输入总面积',
+          renderPhotos: '需要的渲染图数量',
+          renderPhotosDescription: '您希望我们提供多少个不同角度的效果图？',
+          renderPhotosPlaceholder: '请输入需要的效果图数量',
+          required: '必填'
+        },
     roomTagging: {
       title: '标记房间平面图',
       description: '点击平面图标记每个房间位置',
@@ -546,6 +732,10 @@ const resources = {
             description: '设计完成时支付'
           }
         },
+        floorplan: {
+        current: '上传你的平面图',
+        currentDesc: 'pdf或照片'
+    },
         actions: {
           payDeposit: '支付订金并开始项目',
           saveLater: '保存项目稍后支付'
@@ -573,6 +763,10 @@ const resources = {
         inspiration: '灵感照片',
         inspirationDesc: '上传您想要借鉴的设计照片'
       }
+    },
+    floorplan: {
+        current: '上传平面图',
+        currentDesc: 'pdf或照片'
     },
     navigation: {
       back: '返回',
