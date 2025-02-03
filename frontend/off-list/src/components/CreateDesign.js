@@ -10,6 +10,7 @@ import { calculateTotalPrice } from './PricingCalculator';
 import { loadStripe } from '@stripe/stripe-js';
 import ReactPdfViewer from './PdfViewer';
 import { designStyleData } from '../data/designStyleData';
+import VirtualStagingForm from './VirtualStagingForm.jsx';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
@@ -629,9 +630,9 @@ const questions = [
     description: t('createDesign.steps.designType.description')
   },
   {
-    label: 'Home Information',
+    label: t('createDesign.steps.homeInfo.title'),
     type: 'homeInfo',
-    description: 'Tell us about your home'
+    description: t('createDesign.steps.homeInfo.description')
   },
   {
     label: 'Design Style',
@@ -987,56 +988,60 @@ const isCurrentStepValid = () => {
     return null;
   }
     switch (currentQuestion.type) {
-      case 'designType':
-        return (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-            <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button
-                className={`p-6 rounded-lg border-2 transition-all ${
-                  designType === 'virtual-staging'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-300 hover:border-blue-300'
-                }`}
-                onClick={() => setDesignType('virtual-staging')}
-              >
-                <h3 className="text-lg font-medium mb-2">Virtual Staging</h3>
-                <p className="text-gray-600 text-sm">
-                  Transform empty spaces with virtual furniture and decor for real estate listings
-                </p>
-              </button>
-              
-              <button
-                className={`p-6 rounded-lg border-2 transition-all ${
-                  designType === 'remodeling'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-300 hover:border-blue-300'
-                }`}
-                onClick={() => setDesignType('remodeling')}
-              >
-                <h3 className="text-lg font-medium mb-2">Remodeling Design</h3>
-                <p className="text-gray-600 text-sm">
-                  Get professional design plans for remodeling your existing space
-                </p>
-              </button>
-            </div>
-          </div>
-        );
+case 'designType':
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold mb-2">{t('createDesign.steps.designType.title')}</h2>
+      <p className="text-gray-600 mb-4">{t('createDesign.steps.designType.description')}</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          className={`p-6 rounded-lg border-2 transition-all ${
+            designType === 'virtual-staging'
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-gray-300 hover:border-blue-300'
+          }`}
+          onClick={() => setDesignType('virtual-staging')}
+        >
+          <h3 className="text-lg font-medium mb-2">
+            {t('createDesign.steps.designType.options.virtualStaging.title')}
+          </h3>
+          <p className="text-gray-600 text-sm">
+            {t('createDesign.steps.designType.options.virtualStaging.description')}
+          </p>
+        </button>
+        
+        <button
+          className={`p-6 rounded-lg border-2 transition-all ${
+            designType === 'remodeling'
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-gray-300 hover:border-blue-300'
+          }`}
+          onClick={() => setDesignType('remodeling')}
+        >
+          <h3 className="text-lg font-medium mb-2">
+            {t('createDesign.steps.designType.options.remodeling.title')}
+          </h3>
+          <p className="text-gray-600 text-sm">
+            {t('createDesign.steps.designType.options.remodeling.description')}
+          </p>
+        </button>
+      </div>
+    </div>
+  );
 
 // ... earlier code remains the same
 
 case 'homeInfo':
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
+      <h2 className="text-xl font-semibold mb-2">{t('createDesign.steps.homeInfo.title')}</h2>
+      <p className="text-gray-600 mb-4">{t('createDesign.steps.homeInfo.description')}</p>
       
       <div className="space-y-6">
         <div>
           <label className="block text-sm font-medium mb-1">
-            Number of Bedrooms *
+            {t('createDesign.steps.homeInfo.totalBedrooms')} <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
@@ -1047,14 +1052,14 @@ case 'homeInfo':
               totalBedrooms: e.target.value
             }))}
             className="w-full p-2 border rounded-md"
-            placeholder="Enter number of bedrooms"
+            placeholder={t('createDesign.steps.homeInfo.totalBedroomsPlaceholder')}
             required
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Number of Bathrooms *
+            {t('createDesign.steps.homeInfo.totalBathrooms')} <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
@@ -1066,14 +1071,14 @@ case 'homeInfo':
               totalBathrooms: e.target.value
             }))}
             className="w-full p-2 border rounded-md"
-            placeholder="Enter number of bathrooms"
+            placeholder={t('createDesign.steps.homeInfo.totalBathroomsPlaceholder')}
             required
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Total Square Footage *
+            {t('createDesign.steps.homeInfo.totalSquareFootage')} <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
@@ -1084,14 +1089,14 @@ case 'homeInfo':
               totalSquareFootage: e.target.value
             }))}
             className="w-full p-2 border rounded-md"
-            placeholder="Enter total square footage"
+            placeholder={t('createDesign.steps.homeInfo.totalSquareFootagePlaceholder')}
             required
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Number of Render Photos Needed *
+            {t('createDesign.steps.homeInfo.renderPhotos')} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -1103,11 +1108,11 @@ case 'homeInfo':
                 renderPhotos: e.target.value
               }))}
               className="w-full p-2 border rounded-md"
-              placeholder="Enter number of render photos needed"
+              placeholder={t('createDesign.steps.homeInfo.renderPhotosPlaceholder')}
               required
             />
             <p className="mt-1 text-sm text-gray-500">
-              How many different views or angles would you like us to render?
+              {t('createDesign.steps.homeInfo.renderPhotosDescription')}
             </p>
           </div>
         </div>
@@ -1116,11 +1121,10 @@ case 'homeInfo':
   );
 
 case 'designStyle':
-  // Create a state object to track current image index for each style
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-      <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
+      <h2 className="text-xl font-semibold mb-2">{t('createDesign.steps.designStyle.title')}</h2>
+      <p className="text-gray-600 mb-4">{t('createDesign.steps.designStyle.description')}</p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Object.entries(designStyleData).map(([style, images]) => (
@@ -1138,7 +1142,10 @@ case 'designStyle':
               <div className="relative w-full h-48 overflow-hidden">
                 <img
                   src={images[styleImageIndices[style]].location}
-                  alt={`${style} style example ${styleImageIndices[style] + 1}`}
+                  alt={t('createDesign.steps.designStyle.styleExample', {
+                    style: t(`createDesign.designStyles.${style}`),
+                    number: styleImageIndices[style] + 1
+                  })}
                   className="w-full h-full object-cover transition-opacity duration-300"
                 />
                 
@@ -1148,7 +1155,7 @@ case 'designStyle':
                     <button
                       onClick={(e) => handlePrevImage(e, style)}
                       className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-full p-2 transition-all"
-                      aria-label="Previous image"
+                      aria-label={t('createDesign.steps.designStyle.navigation.previous')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -1157,7 +1164,7 @@ case 'designStyle':
                     <button
                       onClick={(e) => handleNextImage(e, style)}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-full p-2 transition-all"
-                      aria-label="Next image"
+                      aria-label={t('createDesign.steps.designStyle.navigation.next')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -1168,12 +1175,15 @@ case 'designStyle':
 
                 {/* Image Counter */}
                 <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
-                  {styleImageIndices[style] + 1} / {images.length}
+                  {t('createDesign.steps.designStyle.navigation.imageCounter', {
+                    current: styleImageIndices[style] + 1,
+                    total: images.length
+                  })}
                 </div>
 
                 {/* Selection Check Mark */}
                 {selectedDesignStyle === style && (
-                  <div className="absolute top-2 right-2 bg-blue-600 text-white p-1 rounded-full">
+                  <div className="absolute top-2 right-2 bg-blue-600 text-white p-1 rounded-full" aria-label={t('createDesign.steps.designStyle.selected')}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -1183,7 +1193,7 @@ case 'designStyle':
 
               {/* Style Name and Navigation Dots */}
               <div className="p-4">
-                <h3 className="font-medium text-lg mb-2">{style}</h3>
+                <h3 className="font-medium text-lg mb-2">{t(`createDesign.designStyles.${style}`)}</h3>
                 
                 {/* Navigation Dots */}
                 {images.length > 1 && (
@@ -1197,7 +1207,7 @@ case 'designStyle':
                             ? 'bg-blue-600' 
                             : 'bg-gray-300 hover:bg-gray-400'
                         }`}
-                        aria-label={`Go to image ${index + 1}`}
+                        aria-label={t('createDesign.steps.designStyle.navigation.goToImage', { number: index + 1 })}
                       />
                     ))}
                   </div>
@@ -1209,106 +1219,134 @@ case 'designStyle':
       </div>
     </div>
   );
-
-      case 'rooms':
-        return (
-          <div className="space-y-4">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-              <p className="text-gray-600">{currentQuestion.description}</p>
-            </div>
-
-            {rooms.map((room) => (
-              <RoomForm
-                key={room.id}
-                room={room}
-                onUpdate={handleUpdateRoom}
-                onRemove={() => handleRemoveRoom(room.id)}
-                projectFolder={projectFolder} // Explicitly pass projectFolder
-              />
-            ))}
-
-            <button
-              type="button"
-              onClick={handleAddRoom}
-              className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full"
-            >
-              Add Another Room
-            </button>
-          </div>
-        );
-
-case 'floorPlanChoice':
+// Replace the 'rooms' case in renderCurrentStep
+case 'rooms':
+  if (designType === 'virtual-staging') {
     return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-        <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
-        
-        <div className="flex flex-col space-y-4">
-          <button
-            className={`p-6 rounded-lg border-2 ${
-              hasExistingFloorPlan === true
-                ? 'border-blue-600 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-300'
-            }`}
-            onClick={() => setHasExistingFloorPlan(true)}
-          >
-            <h3 className="text-lg font-medium mb-2">Yes, I have a floor plan</h3>
-            <p className="text-gray-600 text-sm">
-              I can provide an existing floor plan of my space
-            </p>
-          </button>
-          
-          <button
-            className={`p-6 rounded-lg border-2 ${
-              hasExistingFloorPlan === false
-                ? 'border-blue-600 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-300'
-            }`}
-            onClick={async () => {
-              setHasExistingFloorPlan(false);
-              
-              // Show loading state
-              setShowError({
-                show: true,
-                message: "Sending request to our support team..."
-              });
-              
-              const emailSent = await sendSupportEmail();
-              /*
-              if (emailSent) {
-                setShowError({
-                  show: true,
-                  message: "We've notified our support team about your floor plan request. They'll contact you soon to assist with creating your floor plan. Let's continue with your room details."
-                });
-                
-                // Continue to next step after a short delay
-                setTimeout(() => {
-                  setShowError({ show: false, message: '' });
-                  setCurrentStep(prev => prev + 1);
-                }, 3000);
-              } else {
-                setShowError({
-                  show: true,
-                  message: "We couldn't send the notification automatically. Please email support@pencildogs.com directly for assistance with your floor plan. Let's continue with your room details."
-                });
-                // Still continue to next step
-                setTimeout(() => {
-                  setShowError({ show: false, message: '' });
-                  setCurrentStep(prev => prev + 1);
-                }, 3000);
-              }
-                */
-            }}
-          >
-            <h3 className="text-lg font-medium mb-2">No, I need help creating one</h3>
-            <p className="text-gray-600 text-sm">
-              Request assistance from our team to create a floor plan
-            </p>
-          </button>
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">{t('createDesign.steps.roomDetails.title')}</h2>
+          <p className="text-gray-600">
+            {t('createDesign.steps.roomDetails.description')}
+          </p>
         </div>
+
+        {rooms.map((room) => (
+          <VirtualStagingForm
+            key={room.id}
+            room={room}
+            onUpdate={handleUpdateRoom}
+            onRemove={() => handleRemoveRoom(room.id)}
+            projectFolder={projectFolder}
+          />
+        ))}
+
+        <button
+          type="button"
+          onClick={() => {
+            handleAddRoom({
+              id: Date.now(),
+              existingPhotos: []
+            });
+          }}
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+          <span>{t('createDesign.roomForm.addRoom')}</span>
+        </button>
+
+        {showValidation && rooms.some(room => !room.existingPhotos?.length) && (
+          <p className="text-red-500 text-sm mt-2">
+            {t('createDesign.validation.photoRequired')}
+          </p>
+        )}
       </div>
     );
+  }
+  
+  // For remodeling, show the original detailed room form
+  return (
+    <div className="space-y-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
+        <p className="text-gray-600">{currentQuestion.description}</p>
+      </div>
+
+      {rooms.map((room) => (
+        <RoomForm
+          key={room.id}
+          room={room}
+          onUpdate={handleUpdateRoom}
+          onRemove={() => handleRemoveRoom(room.id)}
+          projectFolder={projectFolder}
+        />
+      ))}
+
+      <button
+        type="button"
+        onClick={handleAddRoom}
+        className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+        </svg>
+        <span>Add Another Room</span>
+      </button>
+    </div>
+  );
+
+case 'floorPlanChoice':
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold mb-2">{t('createDesign.steps.floorPlan.title')}</h2>
+      <p className="text-gray-600 mb-4">{t('createDesign.steps.floorPlan.description')}</p>
+      
+      <div className="flex flex-col space-y-4">
+        <button
+          className={`p-6 rounded-lg border-2 ${
+            hasExistingFloorPlan === true
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-gray-300 hover:border-blue-300'
+          }`}
+          onClick={() => setHasExistingFloorPlan(true)}
+        >
+          <h3 className="text-lg font-medium mb-2">
+            {t('createDesign.floorPlan.choice.yes.title')}
+          </h3>
+          <p className="text-gray-600 text-sm">
+            {t('createDesign.floorPlan.choice.yes.description')}
+          </p>
+        </button>
+        
+        <button
+          className={`p-6 rounded-lg border-2 ${
+            hasExistingFloorPlan === false
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-gray-300 hover:border-blue-300'
+          }`}
+          onClick={async () => {
+            setHasExistingFloorPlan(false);
+            
+            setShowError({
+              show: true,
+              message: t('createDesign.floorPlan.choice.loading')
+            });
+            
+            const emailSent = await sendSupportEmail();
+          }}
+        >
+          <h3 className="text-lg font-medium mb-2">
+            {t('createDesign.floorPlan.choice.no.title')}
+          </h3>
+          <p className="text-gray-600 text-sm">
+            {t('createDesign.floorPlan.choice.no.description')}
+          </p>
+        </button>
+      </div>
+    </div>
+  );
 
       case 'floorPlanUpload':
         return (
@@ -1334,40 +1372,39 @@ case 'floorPlanChoice':
           </div>
         );
 case 'pricingReview':
-  console.log('reached pricing review');
   const squareFootage = parseFloat(homeInfo.totalSquareFootage);
   const ratePerSqFt = 1.00;
   let totalPrice = squareFootage * ratePerSqFt;
   
-  const userEmail = localStorage.getItem('username')
-  const isPencildogsUser = userEmail.endsWith('@pencildogs.com');
-  console.log("ispencildogsuser" + isPencildogsUser);
-  if (isPencildogsUser) 
-  {
+  const userEmail = localStorage.getItem('username');
+  const isPencildogsUser = userEmail?.endsWith('@pencildogs.com');
+  if (isPencildogsUser) {
     totalPrice = 1;
   }
     
   const deposit = totalPrice * 0.6;
   const remaining = totalPrice * 0.4;
-  console.log(squareFootage);
 
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">{currentQuestion.label}</h2>
-        <p className="text-gray-600 mb-4">{currentQuestion.description}</p>
+        <h2 className="text-xl font-semibold mb-2">{t('createDesign.steps.pricing.title')}</h2>
+        <p className="text-gray-600 mb-4">{t('createDesign.steps.pricing.description')}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-6">
-          <h3 className="text-lg font-medium mb-4">Project Cost Breakdown</h3>
+          <h3 className="text-lg font-medium mb-4">{t('createDesign.pricing.breakdown.title')}</h3>
           
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b">
               <div>
-                <h4 className="font-medium">Total Square Footage</h4>
+                <h4 className="font-medium">{t('createDesign.pricing.breakdown.squareFootage.title')}</h4>
                 <p className="text-sm text-gray-600">
-                  {squareFootage} sq ft × ${ratePerSqFt.toFixed(2)}/sq ft
+                  {t('createDesign.pricing.breakdown.squareFootage.rate', {
+                    footage: squareFootage,
+                    rate: ratePerSqFt.toFixed(2)
+                  })}
                 </p>
               </div>
               <div className="text-right">
@@ -1379,8 +1416,8 @@ case 'pricingReview':
           <div className="mt-6 pt-4 border-t space-y-4">
             <div className="flex justify-between items-center text-gray-600">
               <div>
-                <h4 className="text-lg">Total Project Cost</h4>
-                <p className="text-sm">Based on total square footage</p>
+                <h4 className="text-lg">{t('createDesign.pricing.breakdown.total.title')}</h4>
+                <p className="text-sm">{t('createDesign.pricing.breakdown.total.description')}</p>
               </div>
               <div className="text-right">
                 <p className="text-lg">${totalPrice.toFixed(2)}</p>
@@ -1389,8 +1426,12 @@ case 'pricingReview':
 
             <div className="flex justify-between items-center pt-4 border-t">
               <div>
-                <h4 className="text-lg font-semibold text-blue-600">Required Deposit (60%)</h4>
-                <p className="text-sm text-gray-600">Due to start your project</p>
+                <h4 className="text-lg font-semibold text-blue-600">
+                  {t('createDesign.pricing.breakdown.deposit.title')}
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {t('createDesign.pricing.breakdown.deposit.description')}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-blue-600">
@@ -1401,8 +1442,8 @@ case 'pricingReview':
 
             <div className="flex justify-between items-center text-gray-600 text-sm">
               <div>
-                <h4>Remaining Balance (40%)</h4>
-                <p>Due upon design completion</p>
+                <h4>{t('createDesign.pricing.breakdown.remaining.title')}</h4>
+                <p>{t('createDesign.pricing.breakdown.remaining.description')}</p>
               </div>
               <div className="text-right">
                 <p>${remaining.toFixed(2)}</p>
@@ -1415,7 +1456,7 @@ case 'pricingReview':
               onClick={handleNext}
               className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
             >
-              <span>Pay Deposit and Start Project</span>
+              <span>{t('createDesign.pricing.actions.pay')}</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
@@ -1425,7 +1466,7 @@ case 'pricingReview':
               onClick={handleSaveForLater}
               className="w-full py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
             >
-              <span>Save Project and Pay Later</span>
+              <span>{t('createDesign.pricing.actions.saveLater')}</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h1a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2V8a2 2 0 012-2h1v5.586l-1.293-1.293z" />
               </svg>
@@ -1433,14 +1474,11 @@ case 'pricingReview':
           </div>
 
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium mb-2">Important Notes:</h4>
+            <h4 className="text-sm font-medium mb-2">{t('createDesign.pricing.notes.title')}</h4>
             <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Pricing is calculated based on total home square footage</li>
-              <li>• Current rate: $1.00 per square foot</li>
-              <li>• 60% deposit is required to begin the project</li>
-              <li>• Remaining 40% will be due upon design completion</li>
-              <li>• You can save your project now and pay the deposit later</li>
-              <li>• Design work will not begin until the deposit is paid</li>
+              {t('createDesign.pricing.notes.items', { returnObjects: true }).map((item, index) => (
+                <li key={index}>• {item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -1448,7 +1486,6 @@ case 'pricingReview':
     </div>
   );
 
-        
  case 'roomDetails':
         return (
           <div className="space-y-6">
