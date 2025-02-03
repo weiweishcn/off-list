@@ -479,7 +479,7 @@ const resources = {
     translation: {
       // Navigation & Common
       navigation: {
-        home: 'translate me',
+        home: '主页',
         login: '登录',
         signup: '注册',
         contactUs: '联系我们',
@@ -545,7 +545,7 @@ const resources = {
         title: '您的专属设计团队',
         subtitle: '让我们的专业设计师为您的客户创想赋予生命',
         viewDesigns: '查看设计',
-        viewDesignsStyle: 'View Design translate'
+        viewDesignsStyle: '查看设计案例'
       },
 
       // Login Page
@@ -555,7 +555,7 @@ const resources = {
         passwordLabel: '密码',
         submitButton: '登录',
         error: '登录时发生错误，请重试',
-        'Invalid login id or password.': 'translate me'
+        'Invalid login id or password.': '登录错误'
       },
 
     createDesign: {
@@ -828,38 +828,38 @@ const resources = {
 
       // Signup Page
       signup: {
-        title: '中文 Create a Pencil Dogs Account',
-        Realtor: '中文 Realtor',
-        Brokerage: '中文 Brokerage',
-        Supplier: '中文 Supplier',
-        Designer: '中文 Designer',
-        'General Contractor': '中文 General Contractor',
-        Other: '中文 Other',
-        next: '中文 Next',
-        selectOcc: '中文 Select your occupation',
-        enterContact: '中文 Enter your contact information:',
-        phoneField: '中文 Phone Number',
-        fNameField: '中文 First Name',
-        lNameField: '中文 Last Name',
-        emailField: '中文 Email',
-        confEmailField: '中文 Confirm Email',
-        pwField: '中文 Password',
-        confPwField: '中文 Confirm Password',
-        optionalField: '中文 Optional',
+        title: '创建新帐户',
+        Realtor: '房产经纪人',
+        Brokerage: '房地产经纪公司',
+        Supplier: '材料商',
+        Designer: '设计师',
+        'General Contractor': '装修师',
+        Other: '另外',
+        next: '下一步',
+        selectOcc: '职业',
+        enterContact: '输入您的联系信息:',
+        phoneField: '电话',
+        fNameField: '名字',
+        lNameField: '姓名',
+        emailField: '电子邮件',
+        confEmailField: '确认电子邮件',
+        pwField: '密码',
+        confPwField: '确认密码',
+        optionalField: '选修',
 
-        emailNoMatch: "中文 Emails don't match",
-        pwNoMatch: "中文 Passwords don't match",
+        emailNoMatch: "电子邮件不一样",
+        pwNoMatch: "密码不一样",
 
-        'This email is already registered.': '中文 This email is already registered.',
+        'This email is already registered.': '此邮箱号已被注册.',
 
-        fieldReq: '中文 This is a required field.',
-        fieldInvalid: '中文 Please provide a valid ',
+        fieldReq: '此为必填字段',
+        fieldInvalid: '请提供有效数据',
 
-        formSubmit: '中文 Submit',
+        formSubmit: '提交',
 
-        thanks: '中文 Thank you for signing up.',
-        goLogin: '中文 Login Here',
-        goHome: '中文 Return Home',
+        thanks: '感谢您注册.',
+        goLogin: '这里登录',
+        goHome: '回到原页',
       },
 
       // Dashboard Sections
