@@ -6,6 +6,7 @@ import FloorPlanComments from './FloorPlanComments';
 import FinalDesignsSection from './FinalDesignsSection';
 import FileUpload from './FileUpload';
 import axios from 'axios';
+import FloorPlanViewer from './FloorPlanViewer';
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -252,83 +253,91 @@ const renderRoomPhotos = (room) => {
           </div>
         </div>
 
-        {/* Floor Plan Section with Comments */}
-        {project.has_floor_plan && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">{t('projectDetails.floorPlans.title')}</h2>
-            
-            <Tab.Group>
-              <Tab.List className="flex space-x-4 border-b mb-6">
-                {project.floor_plan_url && (
-                  <Tab
-                    className={({ selected }) =>
-                      `px-4 py-2 font-medium focus:outline-none ${
-                        selected
-                          ? 'text-blue-600 border-b-2 border-blue-600'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`
-                    }
-                  >
-                    {t('projectDetails.floorPlans.tabs.yourFloorPlan')}
-                  </Tab>
-                )}
-                {project.tagged_floor_plan_url && (
-                  <Tab
-                    className={({ selected }) =>
-                      `px-4 py-2 font-medium focus:outline-none ${
-                        selected
-                          ? 'text-blue-600 border-b-2 border-blue-600'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`
-                    }
-                  >
-                    {t('projectDetails.floorPlans.tabs.taggedFloorPlan')}
-                  </Tab>
-                )}
-                {project.designer_floor_plan_url && (
-                  <Tab
-                    className={({ selected }) =>
-                      `px-4 py-2 font-medium focus:outline-none ${
-                        selected
-                          ? 'text-blue-600 border-b-2 border-blue-600'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`
-                    }
-                  >
-                    {t('projectDetails.floorPlans.tabs.designerFloorPlan')}
-                  </Tab>
-                )}
-              </Tab.List>
-              
-              <Tab.Panels>
-                {project.floor_plan_url && (
-                  <Tab.Panel>
-                    <FloorPlanComments
-                      projectId={project.id}
-                      imageUrl={project.floor_plan_url}
-                    />
-                  </Tab.Panel>
-                )}
-                {project.tagged_floor_plan_url && (
-                  <Tab.Panel>
-                    <FloorPlanComments
-                      projectId={project.id}
-                      imageUrl={project.tagged_floor_plan_url}
-                    />
-                  </Tab.Panel>
-                )}
-                {project.designer_floor_plan_url && (
-                  <Tab.Panel>
-                    <FloorPlanComments
-                      projectId={project.id}
-                      imageUrl={project.designer_floor_plan_url}
-                    />
-                  </Tab.Panel>
-                )}
-              </Tab.Panels>
-            </Tab.Group>
-          </div>
+
+{/* Floor Plan Section with Comments */}
+{project.has_floor_plan && (
+  <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <h2 className="text-xl font-semibold mb-4">{t('projectDetails.floorPlans.title')}</h2>
+    
+    <Tab.Group>
+      <Tab.List className="flex space-x-4 border-b mb-6">
+        {project.floor_plan_url && (
+          <Tab
+            className={({ selected }) =>
+              `px-4 py-2 font-medium focus:outline-none ${
+                selected
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            {t('projectDetails.floorPlans.tabs.yourFloorPlan')}
+          </Tab>
         )}
+        {project.tagged_floor_plan_url && (
+          <Tab
+            className={({ selected }) =>
+              `px-4 py-2 font-medium focus:outline-none ${
+                selected
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            {t('projectDetails.floorPlans.tabs.taggedFloorPlan')}
+          </Tab>
+        )}
+        {project.designer_floor_plan_url && (
+          <Tab
+            className={({ selected }) =>
+              `px-4 py-2 font-medium focus:outline-none ${
+                selected
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            {t('projectDetails.floorPlans.tabs.designerFloorPlan')}
+          </Tab>
+        )}
+      </Tab.List>
+      
+      <Tab.Panels>
+        {project.floor_plan_url && (
+          <Tab.Panel className="space-y-6">
+            <FloorPlanViewer imageUrl={project.floor_plan_url} />
+          </Tab.Panel>
+        )}
+        {project.tagged_floor_plan_url && (
+          <Tab.Panel className="space-y-6">
+            <FloorPlanViewer imageUrl={project.tagged_floor_plan_url} />
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-4">Comments</h3>
+              <FloorPlanComments
+                projectId={project.id}
+                imageUrl={project.tagged_floor_plan_url}
+                renderImage={false}
+              />
+            </div>
+          </Tab.Panel>
+        )}
+        {project.designer_floor_plan_url && (
+          <Tab.Panel className="space-y-6">
+            <FloorPlanViewer imageUrl={project.designer_floor_plan_url} />
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-4">Comments</h3>
+              <FloorPlanComments
+                projectId={project.id}
+                imageUrl={project.designer_floor_plan_url}
+                renderImage={false}
+              />
+            </div>
+          </Tab.Panel>
+        )}
+      </Tab.Panels>
+    </Tab.Group>
+  </div>
+)}
 
         {/* Rooms Section */}
         <div className="space-y-6">
