@@ -9,6 +9,7 @@ const resources = {
     translation: {
       // Navigation & Common
       navigation: {
+        home: 'Home',
         login: 'Log In',
         signup: 'Sign Up',
         contactUs: 'Contact Us',
@@ -238,30 +239,48 @@ const resources = {
 
       // Login Page
       login: {
-        title: 'Sign in to your account',
+        title: 'Login to Pencil Dogs',
         emailLabel: 'Email',
         passwordLabel: 'Password',
-        submitButton: 'Sign in',
-        error: 'An error occurred during login. Please try again.'
+        submitButton: 'Login',
+        error: 'An error occurred during login. Please try again.',
+        'Invalid login id or password.': 'Invalid login id or password.'
       },
 
       // Signup Page
       signup: {
-        title: 'Create your account',
-        orSignIn: 'Or',
-        signInLink: 'sign in to your existing account',
-        emailLabel: 'Email address',
-        passwordLabel: 'Password',
-        confirmPasswordLabel: 'Confirm Password',
-        activationKeyLabel: 'Activation Key',
-        createAccount: 'Create account',
-        creatingAccount: 'Creating account...',
-        validation: {
-          emailInvalid: 'Please enter a valid email address',
-          passwordMismatch: 'Passwords do not match',
-          invalidKey: 'Invalid activation key',
-          passwordLength: 'Password must be at least 6 characters long'
-        }
+        title: 'Create a Pencil Dogs Account',
+        Realtor: 'Realtor',
+        Brokerage: 'Brokerage',
+        Supplier: 'Supplier',
+        Designer: 'Designer',
+        'General Contractor': 'General Contractor',
+        Other: 'Other',
+        next: 'Next',
+        selectOcc: 'Select your occupation',
+        enterContact: 'Enter your contact information:',
+        phoneField: 'Phone Number',
+        fNameField: 'First Name',
+        lNameField: 'Last Name',
+        emailField: 'Email',
+        confEmailField: 'Confirm Email',
+        pwField: 'Password',
+        confPwField: 'Confirm Password',
+        optionalField: 'Optional',
+
+        emailNoMatch: "Emails don't match",
+        pwNoMatch: "Passwords don't match",
+
+        'This email is already registered.': 'This email is already registered.',
+
+        fieldReq: 'This is a required field.',
+        fieldInvalid: 'Please provide a valid ',
+
+        formSubmit: 'Submit',
+
+        thanks: 'Thank you for signing up.',
+        goLogin: 'Login Here',
+        goHome: 'Return Home',
       },
 
       // Designer Dashboard
@@ -371,6 +390,7 @@ const resources = {
     translation: {
       // Navigation & Common
       navigation: {
+        home: 'translate me',
         login: '登录',
         signup: '注册',
         contactUs: '联系我们',
@@ -435,7 +455,8 @@ const resources = {
       hero: {
         title: '您的专属设计团队',
         subtitle: '让我们的专业设计师为您的客户创想赋予生命',
-        viewDesigns: '查看设计'
+        viewDesigns: '查看设计',
+        viewDesignsStyle: 'View Design translate'
       },
 
       // Login Page
@@ -444,7 +465,8 @@ const resources = {
         emailLabel: '邮箱',
         passwordLabel: '密码',
         submitButton: '登录',
-        error: '登录时发生错误，请重试'
+        error: '登录时发生错误，请重试',
+        'Invalid login id or password.': 'translate me'
       },
 
     createDesign: {
@@ -612,21 +634,38 @@ const resources = {
 
       // Signup Page
       signup: {
-        title: '创建账户',
-        orSignIn: '或者',
-        signInLink: '登录已有账户',
-        emailLabel: '邮箱地址',
-        passwordLabel: '密码',
-        confirmPasswordLabel: '确认密码',
-        activationKeyLabel: '激活码',
-        createAccount: '创建账户',
-        creatingAccount: '创建中...',
-        validation: {
-          emailInvalid: '请输入有效的邮箱地址',
-          passwordMismatch: '两次输入的密码不匹配',
-          invalidKey: '无效的激活码',
-          passwordLength: '密码长度至少为6个字符'
-        }
+        title: '中文 Create a Pencil Dogs Account',
+        Realtor: '中文 Realtor',
+        Brokerage: '中文 Brokerage',
+        Supplier: '中文 Supplier',
+        Designer: '中文 Designer',
+        'General Contractor': '中文 General Contractor',
+        Other: '中文 Other',
+        next: '中文 Next',
+        selectOcc: '中文 Select your occupation',
+        enterContact: '中文 Enter your contact information:',
+        phoneField: '中文 Phone Number',
+        fNameField: '中文 First Name',
+        lNameField: '中文 Last Name',
+        emailField: '中文 Email',
+        confEmailField: '中文 Confirm Email',
+        pwField: '中文 Password',
+        confPwField: '中文 Confirm Password',
+        optionalField: '中文 Optional',
+
+        emailNoMatch: "中文 Emails don't match",
+        pwNoMatch: "中文 Passwords don't match",
+
+        'This email is already registered.': '中文 This email is already registered.',
+
+        fieldReq: '中文 This is a required field.',
+        fieldInvalid: '中文 Please provide a valid ',
+
+        formSubmit: '中文 Submit',
+
+        thanks: '中文 Thank you for signing up.',
+        goLogin: '中文 Login Here',
+        goHome: '中文 Return Home',
       },
 
       // Dashboard Sections

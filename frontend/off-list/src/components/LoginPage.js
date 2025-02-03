@@ -75,12 +75,12 @@ const LoginPage = () => {
   const loginSection = () => {
     return (
       <Form.Root onSubmit={ submitForm } className='flex flex-col gap-2 h-[100%] justify-center'>
-        { buildFormField('text', 'Email', 'email') }
-        { buildFormField('password', 'Password', 'pw') }
+        { buildFormField('text', t('login.emailLabel'), 'email') }
+        { buildFormField('password', t('login.passwordLabel'), 'pw') }
 
         <div>
           <Form.Submit asChild>
-            <Button loading={ loginMutation.isPending }> <Text> Login </Text> </Button>
+            <Button loading={ loginMutation.isPending }> <Text> { t('login.submitButton') } </Text> </Button>
           </Form.Submit>
         </div>
       </Form.Root>
@@ -89,10 +89,10 @@ const LoginPage = () => {
 
   return (
     <AuthWindow
-      headerText='Login to Pencil Dogs'
+      headerText={t('login.title')}
       onBackClick={ () => navigate('/') }
       showErrorBar={ loginMutation.isError }
-      errorMessage={ loginMutation.error?.message }
+      errorMessage={ t(`login.${loginMutation.error?.message}`) }
     >
       <Box
         height='100%'
