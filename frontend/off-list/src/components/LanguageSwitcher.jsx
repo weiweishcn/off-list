@@ -7,7 +7,7 @@ const LanguageSwitcher = ( { size, variant, highContrast } ) => {
   const { i18n } = useTranslation();
 
   return (
-    <Select.Root defaultValue='en' size={ size } onValueChange={ i18n.changeLanguage }>
+    <Select.Root defaultValue={ i18n.language } size={ size } onValueChange={ i18n.changeLanguage }>
       <Select.Trigger variant={ variant }/>
       <Select.Content highContrast={ highContrast } position='popper'>
         <Select.Item value='en'> <Text> English </Text> </Select.Item>

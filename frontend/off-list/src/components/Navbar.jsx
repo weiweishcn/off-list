@@ -38,7 +38,7 @@ const Navbar = () => {
     };
 
     const buttonList = [
-      ['/', 'Home'],
+      ['/', 'navigation.home'],
       ['/login', 'navigation.login'],
       ['/signup', 'navigation.signup'],
       ['/contactus', 'navigation.contactUs']
