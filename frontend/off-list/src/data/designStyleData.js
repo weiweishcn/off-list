@@ -1,5 +1,5 @@
 export const designStyleData = {
-  "Classical Modern": [
+  "ClassicalModern": [
     {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design1/02.jpeg"
     },
@@ -10,7 +10,7 @@ export const designStyleData = {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design4/11.jpeg"
     }
   ],
-  "Modern American": [
+  "ModernAmerican": [
     {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design2/22.jpeg"
     },
@@ -18,7 +18,7 @@ export const designStyleData = {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design2/11.jpeg"
     }
   ],
-  "Classical Chinese": [
+  "ClassicalChinese": [
     {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design2/25.jpeg"
     },
@@ -39,7 +39,7 @@ export const designStyleData = {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design3/02.jpeg"
     }
   ],
-  "Modern Chinese": [
+  "ModernChinese": [
     {
       "location": "https://designimages.sfo3.digitaloceanspaces.com/design5/12.jpeg"
     },

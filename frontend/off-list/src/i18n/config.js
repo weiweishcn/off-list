@@ -117,6 +117,14 @@ const resources = {
       },
             // English
   designStyles: {
+            Classical: 'Classical',
+            ClassicalModern: 'Classical Modern',
+        ModernAmerican: 'Modern American',
+        ClassicalChinese: 'Classical Chinese',
+        ModernChinese: 'Modern Chinese',
+        European: 'European',
+        Minimalist: 'Minimalist',
+        'Modern Chinese': 'Modern Chinese',
     American: 'American',
     European: 'European',
     MidModern: 'Modern',
@@ -614,6 +622,13 @@ const resources = {
         }
       },
         designStyles: {
+                    Classical: '古典',
+        ModernAmerican: '现代美式',
+        ClassicalChinese: '中式古典',
+        European: '欧式',
+        Minimalist: '极简',
+        ModernChinese: '现代中式',
+        ClassicalModern: '现代古典',
                 American: '美式',
     European: '欧式',
     Modern: '现代',
